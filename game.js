@@ -10,7 +10,7 @@ const CONFIG = {
   CARD_GAP: 10,
   GRID_COLS: 6,
   GRID_ROWS: 6,
-  ATTRS: ['fire', 'water', 'wood'], // 火、水、木
+  ATTRS: ['fire', 'water', 'wood'],
   ATTR_COLORS: {
     fire: '#FF6464',
     water: '#6464FF',
@@ -28,8 +28,8 @@ let gameState = {
   tokens: { fire: 0, water: 0, wood: 0 }
 }
 
-// 获取 canvas 和上下文
-const canvas = wx.getSharedCanvas ? wx.getSharedCanvas() : wx.createCanvas()
+// 获取 canvas - 微信小游戏专用
+const canvas = wx.createCanvas()
 const ctx = canvas.getContext('2d')
 
 // 初始化游戏
@@ -41,7 +41,7 @@ function initGame() {
   for (let row = 0; row < CONFIG.GRID_ROWS; row++) {
     for (let col = 0; col < CONFIG.GRID_COLS; col++) {
       const attr = CONFIG.ATTRS[Math.floor(Math.random() * CONFIG.ATTRS.length)]
-      const hp = Math.floor(Math.random() * 4) + 1 // 1-4 血
+      const hp = Math.floor(Math.random() * 4) + 1
       gameState.cards.push({
         id: `card_${row}_${col}`,
         row,
@@ -84,8 +84,8 @@ function render() {
   
   // 绘制玩家信息
   ctx.font = '16px Arial'
-  ctx.fillText(`玩家 1 得分：${gameState.score1}`, 100, 80)
-  ctx.fillText(`玩家 2 得分：${gameState.score2}`, canvas.width - 100, 80)
+  ctx.fillText(`玩家 1: ${gameState.score1}`, 100, 80)
+  ctx.fillText(`玩家 2: ${gameState.score2}`, canvas.width - 100, 80)
   
   // 绘制当前玩家
   ctx.fillStyle = gameState.currentPlayer === 1 ? '#FFD700' : '#FFFFFF'
@@ -100,7 +100,7 @@ function render() {
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText('点击卡牌选择，再次点击相邻卡牌连线', 20, canvas.height - 20)
+  ctx.fillText('点击卡牌选择，再点击相邻同属性卡牌连线', 20, canvas.height - 20)
 }
 
 // 绘制单张卡牌
@@ -125,19 +125,19 @@ function drawCard(card) {
   
   // 血量
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 16px Arial'
+  ctx.font = 'bold 14px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText(`HP:${hp}`, x + 5, y + 20)
+  ctx.fillText(`HP:${hp}`, x + 5, y + 18)
   
   // 属性文字
-  ctx.font = '14px Arial'
+  ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'center'
   const attrNames = { fire: '火', water: '水', wood: '木' }
-  ctx.fillText(attrNames[attr] || attr, x + width / 2, y + height / 2)
+  ctx.fillText(attrNames[attr] || attr, x + width / 2, y + height / 2 + 5)
 }
 
-// 处理触摸事件
-wx.onTouchStart && wx.onTouchStart((e) => {
+// 处理触摸事件 - 微信小游戏专用
+wx.onTouchStart((e) => {
   const touch = e.touches[0]
   const x = touch.clientX
   const y = touch.clientY
@@ -156,18 +156,15 @@ wx.onTouchStart && wx.onTouchStart((e) => {
 
 // 处理卡牌点击
 function handleCardClick(card) {
-  console.log(`点击卡牌：${card.id}, 属性：${card.attr}, 血量：${card.hp}`)
+  console.log(`点击卡牌：${card.id}`)
   
   if (gameState.selectedCard === null) {
-    // 选择第一张牌
     gameState.selectedCard = card
     console.log('选择第一张牌')
   } else if (gameState.selectedCard === card) {
-    // 取消选择
     gameState.selectedCard = null
     console.log('取消选择')
   } else {
-    // 尝试连线
     tryLink(gameState.selectedCard, card)
   }
   
@@ -176,7 +173,7 @@ function handleCardClick(card) {
 
 // 尝试连线
 function tryLink(card1, card2) {
-  console.log(`尝试连线：${card1.id} <-> ${card2.id}`)
+  console.log(`尝试连线`)
   
   // 检查是否相邻
   const isAdjacent = (
@@ -185,14 +182,14 @@ function tryLink(card1, card2) {
   )
   
   if (!isAdjacent) {
-    console.log('不相邻，无法连线')
+    console.log('不相邻')
     gameState.selectedCard = null
     return
   }
   
   // 检查属性是否相同
   if (card1.attr !== card2.attr) {
-    console.log('属性不同，无法连线')
+    console.log('属性不同')
     gameState.selectedCard = null
     return
   }
@@ -200,41 +197,29 @@ function tryLink(card1, card2) {
   // 连线成功！
   console.log('连线成功！')
   
-  // 计算得分
   const linkScore = card1.hp + card2.hp
-  console.log(`连线得分：${linkScore}`)
   
-  // 更新分数
   if (gameState.currentPlayer === 1) {
     gameState.score1 += linkScore
   } else {
     gameState.score2 += linkScore
   }
   
-  // 获得 Token
   gameState.tokens[card1.attr]++
-  console.log(`获得${card1.attr} Token`)
-  
-  // 切换玩家
   gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1
-  
-  // 清除选择
   gameState.selectedCard = null
   
-  // 衰减其他卡牌
   applyDecay()
-  
-  // 检查游戏结束
   checkGameOver()
 }
 
-// 应用衰减（每回合未触发的卡牌 -1 血）
+// 应用衰减
 function applyDecay() {
   gameState.cards.forEach(card => {
     if (card.hp > 0) {
       card.hp--
       if (card.hp <= 0) {
-        console.log(`卡牌${card.id}死亡`)
+        console.log(`卡牌死亡`)
       }
     }
   })
@@ -244,7 +229,7 @@ function applyDecay() {
 function checkGameOver() {
   if (gameState.score1 >= 30 || gameState.score2 >= 30) {
     const winner = gameState.score1 >= 30 ? '玩家 1' : '玩家 2'
-    console.log(`游戏结束！${winner}获胜！`)
+    console.log(`${winner}获胜！`)
     
     wx.showModal({
       title: '游戏结束',
