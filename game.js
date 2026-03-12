@@ -28,8 +28,8 @@ let gameState = {
   tokens: { fire: 0, water: 0, wood: 0 }
 }
 
-//  canvas 和上下文
-const canvas = wx.getSharedCanvas()
+// 获取 canvas 和上下文
+const canvas = wx.getSharedCanvas ? wx.getSharedCanvas() : wx.createCanvas()
 const ctx = canvas.getContext('2d')
 
 // 初始化游戏
@@ -105,7 +105,7 @@ function render() {
 
 // 绘制单张卡牌
 function drawCard(card) {
-  const { x, y, width, height, attr, hp, maxHp } = card
+  const { x, y, width, height, attr, hp } = card
   
   // 卡牌背景
   ctx.fillStyle = CONFIG.ATTR_COLORS[attr] || '#FFFFFF'
@@ -127,17 +127,17 @@ function drawCard(card) {
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText(`❤${hp}`, x + 5, y + 20)
+  ctx.fillText(`HP:${hp}`, x + 5, y + 20)
   
   // 属性文字
-  ctx.font = '12px Arial'
+  ctx.font = '14px Arial'
   ctx.textAlign = 'center'
   const attrNames = { fire: '火', water: '水', wood: '木' }
   ctx.fillText(attrNames[attr] || attr, x + width / 2, y + height / 2)
 }
 
 // 处理触摸事件
-canvas.addEventListener('touchstart', (e) => {
+wx.onTouchStart && wx.onTouchStart((e) => {
   const touch = e.touches[0]
   const x = touch.clientX
   const y = touch.clientY
@@ -201,7 +201,7 @@ function tryLink(card1, card2) {
   console.log('连线成功！')
   
   // 计算得分
-  const linkScore = calculateLinkScore(card1, card2)
+  const linkScore = card1.hp + card2.hp
   console.log(`连线得分：${linkScore}`)
   
   // 更新分数
@@ -213,7 +213,7 @@ function tryLink(card1, card2) {
   
   // 获得 Token
   gameState.tokens[card1.attr]++
-  console.log(`获得${card1.attr} Token，当前：${gameState.tokens[card1.attr]}`)
+  console.log(`获得${card1.attr} Token`)
   
   // 切换玩家
   gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1
@@ -228,17 +228,6 @@ function tryLink(card1, card2) {
   checkGameOver()
 }
 
-// 计算连线得分
-function calculateLinkScore(card1, card2) {
-  // 基础分：两张牌的血量之和
-  const baseScore = card1.hp + card2.hp
-  
-  // Token 加成
-  const tokenBonus = gameState.tokens[card1.attr] * 2
-  
-  return baseScore + tokenBonus
-}
-
 // 应用衰减（每回合未触发的卡牌 -1 血）
 function applyDecay() {
   gameState.cards.forEach(card => {
@@ -246,12 +235,6 @@ function applyDecay() {
       card.hp--
       if (card.hp <= 0) {
         console.log(`卡牌${card.id}死亡`)
-        // 死亡扣分
-        if (gameState.currentPlayer === 1) {
-          gameState.score2 -= 1 // 对手死亡，当前玩家扣分
-        } else {
-          gameState.score1 -= 1
-        }
       }
     }
   })
@@ -259,31 +242,21 @@ function applyDecay() {
 
 // 检查游戏结束
 function checkGameOver() {
-  // 简单规则：先达到 30 分获胜
   if (gameState.score1 >= 30 || gameState.score2 >= 30) {
     const winner = gameState.score1 >= 30 ? '玩家 1' : '玩家 2'
     console.log(`游戏结束！${winner}获胜！`)
     
-    // 显示胜利提示
     wx.showModal({
       title: '游戏结束',
       content: `${winner}获胜！`,
       showCancel: false,
       success: () => {
-        initGame() // 重新开始
+        initGame()
       }
     })
   }
 }
 
-// 游戏主循环
-function gameLoop() {
-  render()
-  requestAnimationFrame(gameLoop)
-}
-
 // 启动游戏
+console.log('游戏启动')
 initGame()
-gameLoop()
-
-console.log('游戏启动完成！')
