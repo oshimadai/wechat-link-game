@@ -1,4 +1,15 @@
-// index.js - 微信小程序页面逻辑
+/**
+ * 1V1 连线桌游 - 微信小游戏
+ * 版本：v3.22 - 正确布局版
+ * 
+ * 核心规则：
+ * - 每名玩家 5 张手牌
+ * - 上下布局，面对面设计
+ * - 连线规则：只能相同属性连接
+ * - 衰减规则：每回合未触发卡牌 -1 血
+ * - 胜利条件：率先达到 20 分
+ */
+
 const CONFIG = {
   WIN_SCORE: 20,
   HAND_SIZE: 5,
@@ -106,6 +117,11 @@ let gameState = {
   gameLog: []
 }
 
+// Canvas 和上下文
+const canvas = wx.createCanvas()
+const ctx = canvas.getContext('2d')
+const { windowWidth, windowHeight } = wx.getSystemInfoSync()
+
 // 创建卡牌
 function createCard(data) {
   return {
@@ -153,7 +169,7 @@ function initGame() {
   gameState.gameOver = false
   gameState.gameLog = ['🎮 游戏开始！']
   
-  updateUI()
+  render()
 }
 
 // 添加日志
@@ -161,33 +177,169 @@ function addLog(message) {
   const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   gameState.gameLog.unshift(`[${timestamp}] ${message}`)
   if (gameState.gameLog.length > 50) gameState.gameLog.pop()
-  updateUI()
+  render()
 }
 
-// 更新 UI
-function updateUI() {
-  const page = getCurrentPages()[getCurrentPages().length - 1]
-  if (page && page.setData) {
-    page.setData({
-      player1Cards: gameState.player1.hand,
-      player2Cards: gameState.player2.hand,
-      score1: gameState.player1.score,
-      score2: gameState.player2.score,
-      penalty1: gameState.player1.penalty,
-      penalty2: gameState.player2.penalty,
-      tokens: { ...gameState.player1.tokens, ...gameState.player2.tokens },
-      currentPlayer: gameState.currentPlayer,
-      round: gameState.round,
-      selectedCard: gameState.selectedCard,
-      actionPrompt: gameState.waitingForAbility ? '请选择能力目标' : '',
-      triggeredCards: gameState.triggeredCards,
-      gameLog: gameState.gameLog,
-      gameOver: gameState.gameOver,
-      winnerText: gameState.gameOver ? (gameState.player1.score >= CONFIG.WIN_SCORE ? '🎉 玩家 1 获胜！' : '🎉 玩家 2 获胜！') : '',
-      finalScore: `玩家 1: ${gameState.player1.score}分 | 玩家 2: ${gameState.player2.score}分`
-    })
+// 渲染游戏
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  
+  // 背景
+  ctx.fillStyle = '#2C3E50'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  
+  // 标题
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 18px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText('1V1 连线桌游 v3.22', canvas.width / 2, 25)
+  
+  // 玩家信息
+  ctx.font = '14px Arial'
+  ctx.fillText(`玩家 1: ${gameState.player1.score}分`, 80, 50)
+  ctx.fillText(`玩家 2: ${gameState.player2.score}分`, canvas.width - 80, 50)
+  
+  // 当前玩家
+  ctx.fillStyle = gameState.currentPlayer === 1 ? '#FFD700' : '#FFFFFF'
+  ctx.fillText(`当前：玩家${gameState.currentPlayer}`, canvas.width / 2, 50)
+  
+  // Token
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '12px Arial'
+  ctx.fillText(`🔥${gameState.player1.tokens.fire} 💧${gameState.player1.tokens.water} 🌿${gameState.player1.tokens.wood}`, canvas.width / 2, 68)
+  
+  // 回合
+  ctx.fillText(`回合：${gameState.round}`, canvas.width / 2, 82)
+  
+  // 能力提示
+  if (gameState.selectedCard && gameState.selectedCard.card.ability) {
+    const ability = gameState.selectedCard.card.ability
+    ctx.fillStyle = '#FFD700'
+    ctx.font = 'bold 14px Arial'
+    ctx.fillText(`能力：${ability.icon} ${ability.name} - 点击目标卡牌使用`, canvas.width / 2, 100)
   }
+  
+  // 绘制玩家 1 区域（上方，5 张牌）
+  const cardWidth = 60
+  const cardHeight = 84
+  const cardGap = 8
+  const totalWidth = CONFIG.HAND_SIZE * cardWidth + (CONFIG.HAND_SIZE - 1) * cardGap
+  const startX = (canvas.width - totalWidth) / 2
+  
+  // 玩家 1 手牌
+  gameState.player1.hand.forEach((card, index) => {
+    if (card) {
+      drawCard(card, startX + index * (cardWidth + cardGap), 120, false)
+    }
+  })
+  
+  // 玩家 2 手牌（下方，旋转 180°）
+  gameState.player2.hand.forEach((card, index) => {
+    if (card) {
+      drawCard(card, startX + index * (cardWidth + cardGap), canvas.height - 120 - cardHeight, true)
+    }
+  })
+  
+  // 游戏日志
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+  ctx.fillRect(10, canvas.height - 100, canvas.width - 20, 90)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '10px Arial'
+  ctx.textAlign = 'left'
+  gameState.gameLog.slice(0, 5).forEach((log, index) => {
+    ctx.fillText(log, 20, canvas.height - 85 + index * 15)
+  })
+  
+  // 操作提示
+  ctx.fillStyle = '#AAAAAA'
+  ctx.font = '12px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText('点击卡牌选择，点击能力图标使用能力，或点击相邻同属性牌连线', canvas.width / 2, canvas.height - 15)
 }
+
+// 绘制卡牌
+function drawCard(card, x, y, rotate180) {
+  ctx.save()
+  
+  if (rotate180) {
+    ctx.translate(x + card.width / 2, y + card.height / 2)
+    ctx.rotate(Math.PI)
+    ctx.translate(-(x + card.width / 2), -(y + card.height / 2))
+  }
+  
+  // 背景
+  const colors = {
+    fire: '#FF6464',
+    water: '#6464FF',
+    wood: '#64FF64',
+    wild: '#FFFF64'
+  }
+  ctx.fillStyle = colors[card.attr] || '#FFFFFF'
+  ctx.fillRect(x, y, card.width, card.height)
+  
+  // 边框
+  ctx.strokeStyle = gameState.selectedCard && gameState.selectedCard.card === card ? '#FFD700' : '#FFFFFF'
+  ctx.lineWidth = gameState.selectedCard && gameState.selectedCard.card === card ? 3 : 2
+  ctx.strokeRect(x, y, card.width, card.height)
+  
+  // 属性
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 16px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(card.attrEmoji, x + card.width / 2, y + card.height / 2 + 5)
+  
+  // 血量
+  ctx.font = 'bold 12px Arial'
+  ctx.textAlign = 'left'
+  const hpText = card.hp === '∞' ? '∞' : `HP:${card.hp}`
+  ctx.fillText(hpText, x + 5, y + 18)
+  
+  // 分数
+  ctx.font = '10px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`+${card.score}`, x + card.width / 2, y + card.height - 10)
+  
+  // 能力图标
+  if (card.ability) {
+    ctx.font = '14px Arial'
+    ctx.fillText(card.ability.icon, x + card.width - 15, y + 18)
+  }
+  
+  ctx.restore()
+}
+
+// 处理触摸事件
+wx.onTouchStart((res) => {
+  if (gameState.gameOver) return
+  
+  const touch = res.touches[0]
+  const x = touch.clientX
+  const y = touch.clientY
+  
+  const cardWidth = 60
+  const cardHeight = 84
+  const cardGap = 8
+  const totalWidth = CONFIG.HAND_SIZE * cardWidth + (CONFIG.HAND_SIZE - 1) * cardGap
+  const startX = (canvas.width - totalWidth) / 2
+  
+  // 检查玩家 1 区域
+  gameState.player1.hand.forEach((card, index) => {
+    const cardX = startX + index * (cardWidth + cardGap)
+    const cardY = 120
+    if (x >= cardX && x <= cardX + cardWidth && y >= cardY && y <= cardY + cardHeight) {
+      handleCardClick(1, index)
+    }
+  })
+  
+  // 检查玩家 2 区域
+  gameState.player2.hand.forEach((card, index) => {
+    const cardX = startX + index * (cardWidth + cardGap)
+    const cardY = canvas.height - 120 - cardHeight
+    if (x >= cardX && x <= cardX + cardWidth && y >= cardY && y <= cardY + cardHeight) {
+      handleCardClick(2, index)
+    }
+  })
+})
 
 // 处理卡牌点击
 function handleCardClick(player, index) {
@@ -213,7 +365,7 @@ function handleCardClick(player, index) {
     resolveChain(player, index)
   }
   
-  updateUI()
+  render()
 }
 
 // 处理能力目标
@@ -251,7 +403,7 @@ function handleAbilityTarget(player, index) {
       resolveChain(gameState.selectedCard.player, gameState.selectedCard.index)
     }
   }
-  updateUI()
+  render()
 }
 
 // 解析连线
@@ -289,7 +441,7 @@ function resolveChain(player, index) {
   gameState.abilityTarget1 = null
   gameState.abilityTarget2 = null
   gameState.waitingForAbility = false
-  updateUI()
+  render()
 }
 
 // 应用衰减
@@ -321,86 +473,12 @@ function refillHand(player) {
   if (needed > 0) addLog(`补充 ${needed} 张牌`)
 }
 
-// 取消选择（全局函数）
-function cancelSelectionGlobal() {
-  gameState.selectedCard = null
-  gameState.waitingForAbility = false
-  gameState.abilityTarget1 = null
-  gameState.abilityTarget2 = null
-  addLog('❌ 取消选择')
-  updateUI()
+// 游戏主循环
+function gameLoop() {
+  render()
+  requestAnimationFrame(gameLoop)
 }
 
-// 使用 Token（全局函数）
-function useTokenGlobal(type) {
-  if (gameState.gameOver) return
-  const player = gameState.currentPlayer === 1 ? gameState.player1 : gameState.player2
-  if (player.tokens[type] <= 0) {
-    addLog(`没有${type}Token`)
-    return
-  }
-  player.tokens[type]--
-  addLog(`使用${type}Token`)
-  updateUI()
-}
-
-Page({
-  data: {
-    player1Cards: [],
-    player2Cards: [],
-    score1: 0,
-    score2: 0,
-    penalty1: 0,
-    penalty2: 0,
-    tokens: { fire: 0, water: 0, wood: 0 },
-    currentPlayer: 1,
-    round: 1,
-    selectedCard: null,
-    actionPrompt: '',
-    triggeredCards: [],
-    gameLog: [],
-    gameOver: false,
-    winnerText: '',
-    finalScore: '',
-    showRulesModal: false
-  },
-
-  onLoad() {
-    console.log('小程序加载')
-  },
-
-  onReady() {
-    console.log('小程序就绪')
-  },
-
-  startGame() {
-    initGame()
-    this.setData({ showRulesModal: false })
-  },
-
-  showRules() {
-    this.setData({ showRulesModal: true })
-  },
-
-  hideRules() {
-    this.setData({ showRulesModal: false })
-  },
-
-  handleCardTap(e) {
-    const { player, index } = e.currentTarget.dataset
-    handleCardClick(parseInt(player), parseInt(index))
-  },
-
-  handleAbilityTap(e) {
-    console.log('能力点击', e)
-  },
-
-  cancelSelection() {
-    cancelSelectionGlobal()
-  },
-
-  useToken(e) {
-    const { type } = e.currentTarget.dataset
-    useTokenGlobal(type)
-  }
-})
+// 启动游戏
+initGame()
+gameLoop()
