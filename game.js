@@ -3,12 +3,20 @@
  * 版本：v1.0 - 首发版
  * 平台：微信小程序
  * 日期：2026-03-13
+ * 
+ * 核心规则:
+ * - 3×3 棋盘布局
+ * - 箭头指向决定连线
+ * - 同属性才能连线
+ * - 未触发卡牌每回合 -1 血
  */
 
 const CONFIG = {
-  WIN_SCORE: 20,
+  WIN_SCORE: 30,
   HAND_SIZE: 5,
-  CARD_SIZE: 90,  // 正方形卡牌
+  BOARD_SIZE: 3,  // 3×3 棋盘
+  CARD_SIZE: 80,
+  CARD_GAP: 8,
   ATTRS: ['fire', 'water', 'wood', 'wild'],
   ARROWS: ['↑', '→', '↓', '←'],
   ATTR_EMOJIS: {
@@ -28,19 +36,19 @@ const FIXED_DECK = [
   { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 1 },
   { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 2 },
   { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 1 },
+  { attr: 'fire', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
   { attr: 'fire', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↑', abilityId: 3 },
+  { attr: 'fire', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
   { attr: 'fire', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↓', abilityId: 2 },
+  { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 2 },
   { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 3 },
   { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 1 },
   { attr: 'fire', hp: 2, score: 2, arrow: '→', abilityId: 1 },
   { attr: 'fire', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '→', abilityId: 3 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '↓', abilityId: 2 },
   { attr: 'fire', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'fire', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 3 },
   { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 1 },
   { attr: 'fire', hp: 1, score: 3, arrow: '→', abilityId: 1 },
   { attr: 'fire', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
@@ -50,19 +58,19 @@ const FIXED_DECK = [
   { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 1 },
   { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 2 },
   { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 1 },
+  { attr: 'water', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
   { attr: 'water', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↑', abilityId: 3 },
+  { attr: 'water', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
   { attr: 'water', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↓', abilityId: 2 },
+  { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 2 },
   { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 3 },
   { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 1 },
   { attr: 'water', hp: 2, score: 2, arrow: '→', abilityId: 1 },
   { attr: 'water', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'water', hp: 2, score: 2, arrow: '→', abilityId: 3 },
-  { attr: 'water', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'water', hp: 2, score: 2, arrow: '↓', abilityId: 2 },
   { attr: 'water', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'water', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 3 },
   { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 1 },
   { attr: 'water', hp: 1, score: 3, arrow: '→', abilityId: 1 },
   { attr: 'water', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
@@ -72,19 +80,19 @@ const FIXED_DECK = [
   { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 1 },
   { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 2 },
   { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 1 },
+  { attr: 'wood', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
   { attr: 'wood', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↑', abilityId: 3 },
+  { attr: 'wood', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
   { attr: 'wood', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↓', abilityId: 2 },
+  { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 2 },
   { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 3 },
   { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 1 },
   { attr: 'wood', hp: 2, score: 2, arrow: '→', abilityId: 1 },
   { attr: 'wood', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '→', abilityId: 3 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '↓', abilityId: 2 },
   { attr: 'wood', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'wood', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 3 },
   { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 1 },
   { attr: 'wood', hp: 1, score: 3, arrow: '→', abilityId: 1 },
   { attr: 'wood', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
@@ -98,8 +106,8 @@ const FIXED_DECK = [
 ]
 
 let gameState = {
-  player1: { hand: [], deck: [], score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } },
-  player2: { hand: [], deck: [], score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } },
+  player1: { board: [], deck: [], score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } },
+  player2: { board: [], deck: [], score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } },
   currentPlayer: 1,
   round: 1,
   selectedCard: null,
@@ -107,7 +115,7 @@ let gameState = {
   abilityTarget2: null,
   waitingForAbility: false,
   waitingForChain: false,
-  chainStartCard: null,
+  chainCards: [],
   triggeredCards: [],
   gameOver: false,
   gameLog: []
@@ -125,7 +133,7 @@ const safeBottom = safeArea ? (windowHeight - safeArea.bottom) : 20
 const safeLeft = safeArea ? safeArea.left : 10
 const safeRight = safeArea ? (windowWidth - safeArea.right) : 10
 
-console.log(`Canvas: ${canvas.width}x${canvas.height}, Safe: ${safeTop}/${safeBottom}/${safeLeft}/${safeRight}`)
+console.log(`🔗 1V1 连线桌游 v1.0 - Canvas: ${canvas.width}x${canvas.height}`)
 
 function createCard(data) {
   return {
@@ -157,13 +165,11 @@ function generateDeck() {
 function initGame() {
   console.log('🔗 1V1 连线桌游 v1.0 - 初始化')
   
-  gameState.player1 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
-  gameState.player2 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
+  gameState.player1 = { board: createEmptyBoard(), deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
+  gameState.player2 = { board: createEmptyBoard(), deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
   
-  for (let i = 0; i < CONFIG.HAND_SIZE; i++) {
-    if (gameState.player1.deck.length > 0) gameState.player1.hand.push(gameState.player1.deck.pop())
-    if (gameState.player2.deck.length > 0) gameState.player2.hand.push(gameState.player2.deck.pop())
-  }
+  refillBoard(gameState.player1)
+  refillBoard(gameState.player2)
   
   gameState.currentPlayer = 1
   gameState.round = 1
@@ -172,12 +178,33 @@ function initGame() {
   gameState.abilityTarget2 = null
   gameState.waitingForAbility = false
   gameState.waitingForChain = false
-  gameState.chainStartCard = null
+  gameState.chainCards = []
   gameState.triggeredCards = []
   gameState.gameOver = false
-  gameState.gameLog = ['🎮 游戏开始！点击卡牌开始']
+  gameState.gameLog = ['🎮 游戏开始！点击卡牌触发']
   
   render()
+}
+
+function createEmptyBoard() {
+  const board = []
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    board[row] = []
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      board[row][col] = null
+    }
+  }
+  return board
+}
+
+function refillBoard(player) {
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      if (!player.board[row][col] && player.deck.length > 0) {
+        player.board[row][col] = player.deck.pop()
+      }
+    }
+  }
 }
 
 function addLog(message) {
@@ -198,101 +225,105 @@ function render() {
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('🔗 1V1 连线桌游', canvas.width / 2, safeTop + 25)
+  ctx.fillText('🔗 1V1 连线桌游 v1.0', canvas.width / 2, safeTop + 20)
   
   const cardSize = CONFIG.CARD_SIZE
-  const cardGap = 8
-  const totalHeight = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
-  const startY = (canvas.height - totalHeight) / 2 + 10
+  const cardGap = CONFIG.CARD_GAP
+  const boardPixelSize = CONFIG.BOARD_SIZE * cardSize + (CONFIG.BOARD_SIZE - 1) * cardGap
   
-  // 玩家 1 区域（左侧）
-  const player1X = safeLeft + 5
+  // 玩家 1 区域（上半部分）
+  const player1Y = safeTop + 50
+  const player1BoardX = (canvas.width / 2 - 20 - boardPixelSize) / 2
+  
   const isPlayer1Turn = gameState.currentPlayer === 1
   ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
-  ctx.font = 'bold 20px Arial'
+  ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 1`, player1X + cardSize / 2, safeTop + 45)
+  ctx.fillText(`👤 玩家 1`, player1BoardX + boardPixelSize / 2, player1Y - 10)
   
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 16px Arial'
-  ctx.fillText(`${gameState.player1.score}分`, player1X + cardSize / 2, safeTop + 65)
+  ctx.font = '14px Arial'
+  ctx.fillText(`${gameState.player1.score}分 | 扣：${gameState.player1.penalty}`, player1BoardX + boardPixelSize / 2, player1Y + 8)
   
-  ctx.font = '12px Arial'
-  ctx.fillText(`🔥${gameState.player1.tokens.fire} 💧${gameState.player1.tokens.water} 🌿${gameState.player1.tokens.wood}`, player1X + cardSize / 2, safeTop + 80)
+  // 绘制玩家 1 棋盘
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      const card = gameState.player1.board[row][col]
+      if (card) {
+        const x = player1BoardX + col * (cardSize + cardGap)
+        const y = player1Y + row * (cardSize + cardGap)
+        drawCard(card, x, y, 'down')  // 玩家 1 卡牌顶部朝下（朝向中线）
+      }
+    }
+  }
   
-  // 玩家 1 手牌
-  gameState.player1.hand.forEach((card, index) => {
-    if (card) drawCard(card, player1X, startY + index * (cardSize + cardGap), 'right')
-  })
+  // 玩家 2 区域（下半部分）
+  const player2Y = player1Y + boardPixelSize + 80
+  const player2BoardX = (canvas.width / 2 + 20 + boardPixelSize) / 2 - boardPixelSize
   
-  // 玩家 2 区域（右侧）
-  const player2X = canvas.width - cardSize - safeRight - 5
   const isPlayer2Turn = gameState.currentPlayer === 2
   ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
-  ctx.font = 'bold 20px Arial'
+  ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 2`, player2X + cardSize / 2, safeTop + 45)
+  ctx.fillText(`👤 玩家 2`, player2BoardX + boardPixelSize / 2, player2Y - 10)
   
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 16px Arial'
-  ctx.fillText(`${gameState.player2.score}分`, player2X + cardSize / 2, safeTop + 65)
+  ctx.font = '14px Arial'
+  ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, player2BoardX + boardPixelSize / 2, player2Y + 8)
   
-  ctx.font = '12px Arial'
-  ctx.fillText(`🔥${gameState.player2.tokens.fire} 💧${gameState.player2.tokens.water} 🌿${gameState.player2.tokens.wood}`, player2X + cardSize / 2, safeTop + 80)
-  
-  // 玩家 2 手牌
-  gameState.player2.hand.forEach((card, index) => {
-    if (card) drawCard(card, player2X, startY + index * (cardSize + cardGap), 'left')
-  })
+  // 绘制玩家 2 棋盘
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      const card = gameState.player2.board[row][col]
+      if (card) {
+        const x = player2BoardX + col * (cardSize + cardGap)
+        const y = player2Y + row * (cardSize + cardGap)
+        drawCard(card, x, y, 'up')  // 玩家 2 卡牌顶部朝上（朝向中线）
+      }
+    }
+  }
   
   // 中间信息
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 18px Arial'
+  ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`回合：${gameState.round}`, canvas.width / 2, safeTop + 110)
+  ctx.fillText(`回合：${gameState.round}`, canvas.width / 2, player1Y + boardPixelSize + 35)
   
   ctx.fillStyle = '#FFD700'
-  ctx.font = 'bold 22px Arial'
-  ctx.fillText(`▶ 玩家${gameState.currentPlayer} ◀`, canvas.width / 2, safeTop + 138)
+  ctx.font = 'bold 20px Arial'
+  ctx.fillText(`▶ 玩家${gameState.currentPlayer} ◀`, canvas.width / 2, player1Y + boardPixelSize + 60)
   
   // 能力提示
   if (gameState.waitingForAbility && gameState.selectedCard) {
     const ability = gameState.selectedCard.card.ability
     ctx.fillStyle = '#00FF00'
-    ctx.font = 'bold 16px Arial'
-    ctx.fillText(`${ability.icon} ${ability.name}: 点击目标卡牌`, canvas.width / 2, safeTop + 160)
-  }
-  
-  // 连线提示
-  if (gameState.waitingForChain && gameState.chainStartCard) {
-    ctx.fillStyle = '#00FF00'
     ctx.font = 'bold 14px Arial'
-    ctx.fillText(`点击${gameState.chainStartCard.attrEmoji}继续连线`, canvas.width / 2, safeTop + 160)
+    ctx.fillText(`${ability.icon} ${ability.name}: 点击目标卡牌`, canvas.width / 2, player1Y + boardPixelSize + 85)
   }
   
   // 取消按钮
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
     ctx.fillStyle = '#FF6B6B'
-    ctx.fillRect(canvas.width / 2 - 50, safeTop + 145, 100, 35)
+    ctx.fillRect(canvas.width / 2 - 50, player1Y + boardPixelSize + 70, 100, 30)
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'bold 16px Arial'
-    ctx.fillText('❌ 取消', canvas.width / 2, safeTop + 168)
+    ctx.font = 'bold 14px Arial'
+    ctx.fillText('❌ 取消', canvas.width / 2, player1Y + boardPixelSize + 90)
   }
   
   // 游戏日志
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-  ctx.fillRect(canvas.width / 2 - 120, canvas.height - safeBottom - 65, 240, 55)
+  ctx.fillRect(canvas.width / 2 - 120, canvas.height - safeBottom - 55, 240, 45)
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '11px Arial'
+  ctx.font = '10px Arial'
   ctx.textAlign = 'left'
-  gameState.gameLog.slice(0, 3).forEach((log, index) => {
-    ctx.fillText(log.substring(0, 25), canvas.width / 2 - 110, canvas.height - safeBottom - 50 + index * 14)
+  gameState.gameLog.slice(0, 2).forEach((log, index) => {
+    ctx.fillText(log.substring(0, 20), canvas.width / 2 - 110, canvas.height - safeBottom - 40 + index * 13)
   })
   
   ctx.fillStyle = '#AAAAAA'
-  ctx.font = '12px Arial'
+  ctx.font = '11px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('点击卡牌 • 连线得分', canvas.width / 2, canvas.height - safeBottom - 12)
+  ctx.fillText('点击卡牌 • 箭头连线', canvas.width / 2, canvas.height - safeBottom - 10)
 }
 
 function drawCard(card, x, y, direction) {
@@ -301,14 +332,12 @@ function drawCard(card, x, y, direction) {
   const centerX = x + card.width / 2
   const centerY = y + card.height / 2
   
-  if (direction === 'right') {
+  if (direction === 'down') {
     ctx.translate(centerX, centerY)
-    ctx.rotate(Math.PI / 2)
+    ctx.rotate(Math.PI)
     ctx.translate(-centerX, -centerY)
-  } else if (direction === 'left') {
-    ctx.translate(centerX, centerY)
-    ctx.rotate(-Math.PI / 2)
-    ctx.translate(-centerX, -centerY)
+  } else if (direction === 'up') {
+    // 不旋转
   }
   
   // 背景
@@ -316,7 +345,7 @@ function drawCard(card, x, y, direction) {
     fire: '#FF6464',
     water: '#6464FF',
     wood: '#64FF64',
-    wild: '#2C2C2C'  // 黑色
+    wild: '#2C2C2C'
   }
   ctx.fillStyle = colors[card.attr] || '#FFFFFF'
   ctx.fillRect(x, y, card.width, card.height)
@@ -334,32 +363,32 @@ function drawCard(card, x, y, direction) {
   }
   
   // 属性
-  ctx.fillStyle = card.attr === 'wild' ? '#FFFFFF' : '#FFFFFF'
-  ctx.font = 'bold 24px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText(card.attrEmoji, x + card.width / 2, y + 28)
-  
-  // 箭头（大字体，白色）
-  ctx.font = 'bold 42px Arial'
   ctx.fillStyle = '#FFFFFF'
-  ctx.fillText(card.arrow, x + card.width / 2, y + card.height / 2 + 14)
+  ctx.font = 'bold 20px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(card.attrEmoji, x + card.width / 2, y + 24)
+  
+  // 箭头
+  ctx.font = 'bold 36px Arial'
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillText(card.arrow, x + card.width / 2, y + card.height / 2 + 12)
   
   // 血量
-  ctx.font = 'bold 12px Arial'
+  ctx.font = 'bold 10px Arial'
   ctx.textAlign = 'left'
   const hpText = card.hp === '∞' ? '∞' : `HP:${card.hp}`
-  ctx.fillText(hpText, x + 5, y + 16)
+  ctx.fillText(hpText, x + 4, y + 14)
   
   // 分数
-  ctx.font = 'bold 14px Arial'
+  ctx.font = 'bold 12px Arial'
   ctx.textAlign = 'center'
   ctx.fillStyle = '#FFFFFF'
-  ctx.fillText(`+${card.score}`, x + card.width / 2, y + card.height - 12)
+  ctx.fillText(`+${card.score}`, x + card.width / 2, y + card.height - 10)
   
   // 能力图标
   if (card.ability) {
-    ctx.font = '18px Arial'
-    ctx.fillText(card.ability.icon, x + card.width - 14, y + 16)
+    ctx.font = '14px Arial'
+    ctx.fillText(card.ability.icon, x + card.width - 12, y + 14)
   }
   
   ctx.restore()
@@ -373,143 +402,140 @@ wx.onTouchStart((res) => {
   const y = touch.clientY
   
   const cardSize = CONFIG.CARD_SIZE
-  const cardGap = 8
-  const totalHeight = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
-  const startY = (canvas.height - totalHeight) / 2 + 10
+  const cardGap = CONFIG.CARD_GAP
+  const boardPixelSize = CONFIG.BOARD_SIZE * cardSize + (CONFIG.BOARD_SIZE - 1) * cardGap
   
-  // 检查取消按钮
-  if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
-    if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 &&
-        y >= safeTop + 145 && y <= safeTop + 180) {
-      cancelSelection()
-      return
+  // 玩家 1 区域
+  const player1Y = safeTop + 50
+  const player1BoardX = (canvas.width / 2 - 20 - boardPixelSize) / 2
+  
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      const card = gameState.player1.board[row][col]
+      if (card) {
+        const cardX = player1BoardX + col * (cardSize + cardGap)
+        const cardY = player1Y + row * (cardSize + cardGap)
+        if (x >= cardX && x <= cardX + cardSize && y >= cardY && y <= cardY + cardSize) {
+          handleCardClick(1, row, col)
+          return
+        }
+      }
     }
   }
   
-  // 检查玩家 1 区域
-  const player1X = safeLeft + 5
-  gameState.player1.hand.forEach((card, index) => {
-    const cardY = startY + index * (cardSize + cardGap)
-    if (x >= player1X && x <= player1X + cardSize && y >= cardY && y <= cardY + cardSize) {
-      handleCardClick(1, index)
-    }
-  })
+  // 玩家 2 区域
+  const player2Y = player1Y + boardPixelSize + 80
+  const player2BoardX = (canvas.width / 2 + 20 + boardPixelSize) / 2 - boardPixelSize
   
-  // 检查玩家 2 区域
-  const player2X = canvas.width - cardSize - safeRight - 5
-  gameState.player2.hand.forEach((card, index) => {
-    const cardY = startY + index * (cardSize + cardGap)
-    if (x >= player2X && x <= player2X + cardSize && y >= cardY && y <= cardY + cardSize) {
-      handleCardClick(2, index)
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      const card = gameState.player2.board[row][col]
+      if (card) {
+        const cardX = player2BoardX + col * (cardSize + cardGap)
+        const cardY = player2Y + row * (cardSize + cardGap)
+        if (x >= cardX && x <= cardX + cardSize && y >= cardY && y <= cardY + cardSize) {
+          handleCardClick(2, row, col)
+          return
+        }
+      }
     }
-  })
+  }
+  
+  // 取消按钮
+  if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
+    if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 &&
+        y >= player1Y + boardPixelSize + 70 && y <= player1Y + boardPixelSize + 100) {
+      cancelSelection()
+    }
+  }
 })
 
-function handleCardClick(player, index) {
+function handleCardClick(player, row, col) {
   if (gameState.gameOver) return
   
-  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
-  const card = hand[index]
+  const board = player === 1 ? gameState.player1.board : gameState.player2.board
+  const card = board[row][col]
   
   if (!card || card.triggered) return
   
-  // 如果正在等待能力目标
   if (gameState.waitingForAbility && gameState.selectedCard) {
-    handleAbilityTarget(player, index)
+    handleAbilityTarget(player, row, col)
     return
   }
   
-  // 如果正在等待连线
-  if (gameState.waitingForChain && gameState.chainStartCard) {
-    continueChain(player, index)
-    return
-  }
-  
-  // 选择卡牌
-  gameState.selectedCard = { player, index, card }
+  gameState.selectedCard = { player, row, col, card }
   addLog(`选择了 ${card.attrEmoji}`)
   
   if (card.ability) {
     gameState.waitingForAbility = true
     addLog(`使用能力：${card.ability.icon} ${card.ability.name}`)
   } else {
-    // 没有能力，直接触发并检查连线
-    triggerCard(player, index)
-    checkChain(player, index)
+    triggerCard(player, row, col)
+    checkChain(player, row, col)
   }
   
   render()
 }
 
-function triggerCard(player, index) {
-  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
-  const card = hand[index]
+function triggerCard(player, row, col) {
+  const board = player === 1 ? gameState.player1.board : gameState.player2.board
+  const card = board[row][col]
   
   if (!card || card.triggered) return
   
   card.triggered = true
   gameState.triggeredCards.push({ ...card })
   
-  // 增加分数
   const points = card.score
   if (player === 1) gameState.player1.score += points
   else gameState.player2.score += points
   
-  addLog(`触发 ${card.attrEmoji} +${points}分 (总分：${player === 1 ? gameState.player1.score : gameState.player2.score})`)
+  addLog(`触发 ${card.attrEmoji} +${points}分`)
 }
 
-function checkChain(player, index) {
-  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
-  const card = hand[index]
+function checkChain(player, row, col) {
+  const board = player === 1 ? gameState.player1.board : gameState.player2.board
+  const card = board[row][col]
   
   if (!card) return
   
   const arrow = card.arrow
-  let nextIndex = null
+  let nextRow = row
+  let nextCol = col
   
   // 根据箭头方向找下一张牌
-  if (arrow === '→') {
-    for (let i = index + 1; i < hand.length; i++) {
-      if (hand[i] && !hand[i].triggered) {
-        if (hand[i].attr === card.attr || hand[i].attr === 'wild' || card.attr === 'wild') {
-          nextIndex = i
-          break
-        }
-      }
-    }
-  } else if (arrow === '↓') {
-    for (let i = index + 1; i < hand.length; i++) {
-      if (hand[i] && !hand[i].triggered) {
-        if (hand[i].attr === card.attr || hand[i].attr === 'wild' || card.attr === 'wild') {
-          nextIndex = i
-          break
-        }
-      }
-    }
-  } else if (arrow === '←') {
-    for (let i = index - 1; i >= 0; i--) {
-      if (hand[i] && !hand[i].triggered) {
-        if (hand[i].attr === card.attr || hand[i].attr === 'wild' || card.attr === 'wild') {
-          nextIndex = i
-          break
-        }
-      }
-    }
-  } else if (arrow === '↑') {
-    for (let i = index - 1; i >= 0; i--) {
-      if (hand[i] && !hand[i].triggered) {
-        if (hand[i].attr === card.attr || hand[i].attr === 'wild' || card.attr === 'wild') {
-          nextIndex = i
-          break
-        }
-      }
-    }
+  if (arrow === '↑') nextRow = row - 1
+  else if (arrow === '↓') nextRow = row + 1
+  else if (arrow === '←') nextCol = col - 1
+  else if (arrow === '→') nextCol = col + 1
+  
+  // 检查是否在棋盘内
+  if (nextRow < 0 || nextRow >= CONFIG.BOARD_SIZE || nextCol < 0 || nextCol >= CONFIG.BOARD_SIZE) {
+    endTurn(player)
+    return
   }
   
-  if (nextIndex !== null) {
+  const nextCard = board[nextRow][nextCol]
+  
+  // 检查是否有牌
+  if (!nextCard) {
+    endTurn(player)
+    return
+  }
+  
+  // 检查是否已触发
+  if (nextCard.triggered) {
+    endTurn(player)
+    return
+  }
+  
+  // 检查属性是否匹配
+  const isMatch = card.attr === nextCard.attr || card.attr === 'wild' || nextCard.attr === 'wild'
+  
+  if (isMatch) {
     gameState.waitingForChain = true
-    gameState.chainStartCard = card
-    addLog(`点击${card.attrEmoji}继续连线`)
+    gameState.chainCards = [{ player, row, col }]
+    addLog(`点击${nextCard.attrEmoji}继续连线`)
   } else {
     endTurn(player)
   }
@@ -517,29 +543,26 @@ function checkChain(player, index) {
   render()
 }
 
-function continueChain(player, index) {
-  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
-  const card = hand[index]
+function continueChain(player, row, col) {
+  const board = player === 1 ? gameState.player1.board : gameState.player2.board
+  const card = board[row][col]
   
   if (!card) return
   
-  // 触发这张牌
-  triggerCard(player, index)
-  
-  // 继续检查连线
-  checkChain(player, index)
+  triggerCard(player, row, col)
+  checkChain(player, row, col)
 }
 
 function endTurn(player) {
   addLog(`--- 回合结束 ---`)
   
   // 衰减阶段
-  applyDecay(gameState.player1.hand)
-  applyDecay(gameState.player2.hand)
+  applyDecay(gameState.player1.board)
+  applyDecay(gameState.player2.board)
   
   // 补充手牌
-  refillHand(gameState.player1)
-  refillHand(gameState.player2)
+  refillBoard(gameState.player1)
+  refillBoard(gameState.player2)
   
   // 检查胜利
   if (gameState.player1.score >= CONFIG.WIN_SCORE || gameState.player2.score >= CONFIG.WIN_SCORE) {
@@ -548,7 +571,6 @@ function endTurn(player) {
     const winScore = gameState.player1.score >= CONFIG.WIN_SCORE ? gameState.player1.score : gameState.player2.score
     addLog(`🎉 ${winner}获胜！${winScore}分`)
   } else {
-    // 交换回合
     if (gameState.currentPlayer === 1) {
       gameState.currentPlayer = 2
     } else {
@@ -558,20 +580,19 @@ function endTurn(player) {
     addLog(`回合 ${gameState.round} - 玩家${gameState.currentPlayer}`)
   }
   
-  // 重置状态
   gameState.selectedCard = null
   gameState.abilityTarget1 = null
   gameState.abilityTarget2 = null
   gameState.waitingForAbility = false
   gameState.waitingForChain = false
-  gameState.chainStartCard = null
+  gameState.chainCards = []
   
   render()
 }
 
-function handleAbilityTarget(player, index) {
-  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
-  const targetCard = hand[index]
+function handleAbilityTarget(player, row, col) {
+  const board = player === 1 ? gameState.player1.board : gameState.player2.board
+  const targetCard = board[row][col]
   if (!targetCard) return
   
   const ability = gameState.selectedCard.card.ability
@@ -581,29 +602,29 @@ function handleAbilityTarget(player, index) {
     targetCard.arrow = arrowMap[targetCard.arrow]
     addLog(`${ability.icon} 旋转 ${targetCard.attrEmoji}`)
     gameState.waitingForAbility = false
-    triggerCard(gameState.selectedCard.player, gameState.selectedCard.index)
-    checkChain(gameState.selectedCard.player, gameState.selectedCard.index)
+    triggerCard(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
+    checkChain(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
   } else if (ability.id === 2) {
     targetCard.attr = gameState.selectedCard.card.attr
     targetCard.attrEmoji = gameState.selectedCard.card.attrEmoji
     addLog(`${ability.icon} ${targetCard.attrEmoji} 变色`)
     gameState.waitingForAbility = false
-    triggerCard(gameState.selectedCard.player, gameState.selectedCard.index)
-    checkChain(gameState.selectedCard.player, gameState.selectedCard.index)
+    triggerCard(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
+    checkChain(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
   } else if (ability.id === 3) {
     if (!gameState.abilityTarget1) {
-      gameState.abilityTarget1 = { player, index, card: targetCard }
+      gameState.abilityTarget1 = { player, row, col, card: targetCard }
       addLog('请选择第二张牌')
     } else {
       const target2 = gameState.abilityTarget1
-      const temp = { ...hand[target2.index] }
-      hand[target2.index] = { ...targetCard }
-      hand[index] = { ...temp }
+      const temp = { ...board[target2.row][target2.col] }
+      board[target2.row][target2.col] = { ...targetCard }
+      board[row][col] = { ...temp }
       addLog(`${ability.icon} 交换位置`)
       gameState.waitingForAbility = false
       gameState.abilityTarget1 = null
-      triggerCard(gameState.selectedCard.player, gameState.selectedCard.index)
-      checkChain(gameState.selectedCard.player, gameState.selectedCard.index)
+      triggerCard(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
+      checkChain(gameState.selectedCard.player, gameState.selectedCard.row, gameState.selectedCard.col)
     }
   }
   
@@ -614,36 +635,33 @@ function cancelSelection() {
   gameState.selectedCard = null
   gameState.waitingForAbility = false
   gameState.waitingForChain = false
-  gameState.chainStartCard = null
+  gameState.chainCards = []
   gameState.abilityTarget1 = null
   gameState.abilityTarget2 = null
   addLog('❌ 取消选择')
   render()
 }
 
-function applyDecay(hand) {
-  hand.forEach(card => {
-    if (!card.triggered && card.hp !== '∞') {
-      const newHp = typeof card.hp === 'number' ? card.hp - 1 : card.hp
-      if (newHp <= 0) {
-        card.hp = 0
-        card.triggered = true
-        if (card.maxHp > 0) {
-          const player = hand === gameState.player1.hand ? gameState.player1 : gameState.player2
-          player.penalty += 1
-          addLog(`☠️ ${card.attrEmoji} 死亡 -1 分`)
+function applyDecay(board) {
+  for (let row = 0; row < CONFIG.BOARD_SIZE; row++) {
+    for (let col = 0; col < CONFIG.BOARD_SIZE; col++) {
+      const card = board[row][col]
+      if (card && !card.triggered && card.hp !== '∞') {
+        const newHp = typeof card.hp === 'number' ? card.hp - 1 : card.hp
+        if (newHp <= 0) {
+          card.hp = 0
+          card.triggered = true
+          if (card.maxHp > 0) {
+            // 找到对应的 player 并增加 penalty
+            const player = board === gameState.player1.board ? gameState.player1 : gameState.player2
+            player.penalty += 1
+            addLog(`☠️ ${card.attrEmoji} 死亡 -1 分`)
+          }
+        } else {
+          card.hp = newHp
         }
-      } else {
-        card.hp = newHp
       }
     }
-  })
-}
-
-function refillHand(player) {
-  const needed = CONFIG.HAND_SIZE - player.hand.filter(c => c).length
-  for (let i = 0; i < needed && player.deck.length > 0; i++) {
-    player.hand.push(player.deck.pop())
   }
 }
 
