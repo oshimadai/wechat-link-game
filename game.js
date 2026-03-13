@@ -1,10 +1,10 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
- * 版本：v3.22 - 正确布局版
+ * 版本：v3.22 - 左右布局版
  * 
  * 核心规则：
  * - 每名玩家 5 张手牌
- * - 上下布局，面对面设计
+ * - 左右布局，面对面设计
  * - 连线规则：只能相同属性连接
  * - 衰减规则：每回合未触发卡牌 -1 血
  * - 胜利条件：率先达到 20 分
@@ -122,11 +122,18 @@ const canvas = wx.createCanvas()
 const ctx = canvas.getContext('2d')
 
 // 设置 Canvas 尺寸为屏幕尺寸
-const { windowWidth, windowHeight } = wx.getSystemInfoSync()
+const { windowWidth, windowHeight, safeArea } = wx.getSystemInfoSync()
 canvas.width = windowWidth
 canvas.height = windowHeight
 
+// 安全区域（避让刘海屏）
+const safeTop = safeArea ? safeArea.top : 20
+const safeBottom = safeArea ? (windowHeight - safeArea.bottom) : 20
+const safeLeft = safeArea ? safeArea.left : 10
+const safeRight = safeArea ? (windowWidth - safeArea.right) : 10
+
 console.log(`Canvas 尺寸：${canvas.width}x${canvas.height}`)
+console.log(`安全区域：上${safeTop} 下${safeBottom} 左${safeLeft} 右${safeRight}`)
 
 // 创建卡牌
 function createCard(data) {
@@ -140,8 +147,8 @@ function createCard(data) {
     triggered: false,
     ability: data.abilityId ? CONFIG.ABILITIES.find(a => a.id === data.abilityId) : null,
     attrEmoji: CONFIG.ATTR_EMOJIS[data.attr],
-    width: 60,
-    height: 84
+    width: 80,
+    height: 112
   }
 }
 
@@ -150,7 +157,6 @@ function generateDeck() {
   const deck = FIXED_DECK.map(data => createCard(data))
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    // 使用传统交换方式，避免解构赋值
     const temp = deck[i]
     deck[i] = deck[j]
     deck[j] = temp
@@ -199,11 +205,11 @@ function render() {
   ctx.fillStyle = '#2C3E50'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   
-  // 标题
+  // 标题（避让刘海屏）
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 20px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('🔗 1V1 连线桌游 v3.22', canvas.width / 2, 30)
+  ctx.fillText('🔗 1V1 连线桌游 v3.22', canvas.width / 2, safeTop + 25)
   
   // 卡牌尺寸（左右布局，更大）
   const cardWidth = 80
@@ -212,47 +218,47 @@ function render() {
   const totalHeight = CONFIG.HAND_SIZE * cardHeight + (CONFIG.HAND_SIZE - 1) * cardGap
   const startY = (canvas.height - totalHeight) / 2
   
-  // 玩家 1 区域（左侧）
-  const player1X = 40
+  // 玩家 1 区域（左侧，卡牌顶部朝右）
+  const player1X = safeLeft + 10
   ctx.fillStyle = gameState.currentPlayer === 1 ? '#FFD700' : '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 1`, player1X + cardWidth / 2, 20)
+  ctx.fillText(`👤 玩家 1`, player1X + cardWidth / 2, safeTop + 15)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
-  ctx.fillText(`${gameState.player1.score}分`, player1X + cardWidth / 2, 38)
+  ctx.fillText(`${gameState.player1.score}分`, player1X + cardWidth / 2, safeTop + 32)
   
   // 玩家 1 Token
   ctx.font = '12px Arial'
-  ctx.fillText(`🔥${gameState.player1.tokens.fire} 💧${gameState.player1.tokens.water} 🌿${gameState.player1.tokens.wood}`, player1X + cardWidth / 2, 52)
+  ctx.fillText(`🔥${gameState.player1.tokens.fire} 💧${gameState.player1.tokens.water} 🌿${gameState.player1.tokens.wood}`, player1X + cardWidth / 2, safeTop + 48)
   
-  // 玩家 1 手牌（左侧，从上到下）
+  // 玩家 1 手牌（左侧，从上到下，卡牌顶部朝右 - 旋转 90°）
   gameState.player1.hand.forEach((card, index) => {
     if (card) {
-      drawCard(card, player1X, startY + index * (cardHeight + cardGap), false, true)
+      drawCard(card, player1X, startY + index * (cardHeight + cardGap), 'right')
     }
   })
   
-  // 玩家 2 区域（右侧）
-  const player2X = canvas.width - cardWidth - 40
+  // 玩家 2 区域（右侧，卡牌顶部朝左）
+  const player2X = canvas.width - cardWidth - safeRight - 10
   ctx.fillStyle = gameState.currentPlayer === 2 ? '#FFD700' : '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 2`, player2X + cardWidth / 2, 20)
+  ctx.fillText(`👤 玩家 2`, player2X + cardWidth / 2, safeTop + 15)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
-  ctx.fillText(`${gameState.player2.score}分`, player2X + cardWidth / 2, 38)
+  ctx.fillText(`${gameState.player2.score}分`, player2X + cardWidth / 2, safeTop + 32)
   
   // 玩家 2 Token
   ctx.font = '12px Arial'
-  ctx.fillText(`🔥${gameState.player2.tokens.fire} 💧${gameState.player2.tokens.water} 🌿${gameState.player2.tokens.wood}`, player2X + cardWidth / 2, 52)
+  ctx.fillText(`🔥${gameState.player2.tokens.fire} 💧${gameState.player2.tokens.water} 🌿${gameState.player2.tokens.wood}`, player2X + cardWidth / 2, safeTop + 48)
   
-  // 玩家 2 手牌（右侧，从上到下，旋转 180°）
+  // 玩家 2 手牌（右侧，从上到下，卡牌顶部朝左 - 旋转 270°）
   gameState.player2.hand.forEach((card, index) => {
     if (card) {
-      drawCard(card, player2X, startY + index * (cardHeight + cardGap), true, true)
+      drawCard(card, player2X, startY + index * (cardHeight + cardGap), 'left')
     }
   })
   
@@ -260,46 +266,57 @@ function render() {
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`回合：${gameState.round}`, canvas.width / 2, 60)
+  ctx.fillText(`回合：${gameState.round}`, canvas.width / 2, safeTop + 70)
   
   // 当前玩家提示
   ctx.fillStyle = '#FFD700'
   ctx.font = 'bold 18px Arial'
-  ctx.fillText(`当前：玩家${gameState.currentPlayer}`, canvas.width / 2, 85)
+  ctx.textAlign = 'center'
+  ctx.fillText(`当前：玩家${gameState.currentPlayer}`, canvas.width / 2, safeTop + 95)
   
   // 能力提示
   if (gameState.selectedCard && gameState.selectedCard.card.ability) {
     const ability = gameState.selectedCard.card.ability
     ctx.fillStyle = '#FFD700'
     ctx.font = 'bold 14px Arial'
-    ctx.fillText(`能力：${ability.icon} ${ability.name}`, canvas.width / 2, 105)
+    ctx.fillText(`能力：${ability.icon} ${ability.name}`, canvas.width / 2, safeTop + 115)
   }
   
-  // 游戏日志
+  // 游戏日志（底部，避让安全区）
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-  ctx.fillRect(canvas.width / 2 - 150, canvas.height - 80, 300, 70)
+  ctx.fillRect(canvas.width / 2 - 150, canvas.height - safeBottom - 70, 300, 60)
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '11px Arial'
   ctx.textAlign = 'left'
-  gameState.gameLog.slice(0, 4).forEach((log, index) => {
-    ctx.fillText(log, canvas.width / 2 - 140, canvas.height - 65 + index * 15)
+  gameState.gameLog.slice(0, 3).forEach((log, index) => {
+    ctx.fillText(log, canvas.width / 2 - 140, canvas.height - safeBottom - 55 + index * 15)
   })
   
-  // 操作提示
+  // 操作提示（底部）
   ctx.fillStyle = '#AAAAAA'
   ctx.font = '12px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('点击卡牌选择 • 点击能力图标使用能力', canvas.width / 2, canvas.height - 15)
+  ctx.fillText('点击卡牌选择 • 点击能力图标使用能力', canvas.width / 2, canvas.height - safeBottom - 15)
 }
 
-// 绘制卡牌
-function drawCard(card, x, y, rotate180, isVertical) {
+// 绘制卡牌（支持旋转方向）
+function drawCard(card, x, y, direction) {
   ctx.save()
   
-  if (rotate180) {
-    ctx.translate(x + card.width / 2, y + card.height / 2)
-    ctx.rotate(Math.PI)
-    ctx.translate(-(x + card.width / 2), -(y + card.height / 2))
+  const centerX = x + card.width / 2
+  const centerY = y + card.height / 2
+  
+  // 根据方向旋转
+  if (direction === 'right') {
+    // 玩家 1：顺时针 90°，顶部朝右
+    ctx.translate(centerX, centerY)
+    ctx.rotate(Math.PI / 2)
+    ctx.translate(-centerX, -centerY)
+  } else if (direction === 'left') {
+    // 玩家 2：逆时针 90°（顺时针 270°），顶部朝左
+    ctx.translate(centerX, centerY)
+    ctx.rotate(-Math.PI / 2)
+    ctx.translate(-centerX, -centerY)
   }
   
   // 背景
@@ -364,7 +381,7 @@ wx.onTouchStart((res) => {
   const startY = (canvas.height - totalHeight) / 2
   
   // 检查玩家 1 区域（左侧）
-  const player1X = 40
+  const player1X = safeLeft + 10
   gameState.player1.hand.forEach((card, index) => {
     const cardY = startY + index * (cardHeight + cardGap)
     if (x >= player1X && x <= player1X + cardWidth && y >= cardY && y <= cardY + cardHeight) {
@@ -373,7 +390,7 @@ wx.onTouchStart((res) => {
   })
   
   // 检查玩家 2 区域（右侧）
-  const player2X = canvas.width - cardWidth - 40
+  const player2X = canvas.width - cardWidth - safeRight - 10
   gameState.player2.hand.forEach((card, index) => {
     const cardY = startY + index * (cardHeight + cardGap)
     if (x >= player2X && x <= player2X + cardWidth && y >= cardY && y <= cardY + cardHeight) {
