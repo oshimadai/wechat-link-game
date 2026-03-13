@@ -282,11 +282,19 @@ function render() {
   }
   
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
+    // 取消按钮
     ctx.fillStyle = '#FF6B6B'
-    ctx.fillRect(canvas.width / 2 - 50, middleY + 35, 100, 30)
+    ctx.fillRect(canvas.width / 2 - 110, middleY + 35, 100, 30)
     ctx.fillStyle = '#FFFFFF'
     ctx.font = 'bold 14px Arial'
-    ctx.fillText('❌ 取消', canvas.width / 2, middleY + 55)
+    ctx.fillText('❌ 取消', canvas.width / 2 - 60, middleY + 55)
+    
+    // 激活按钮
+    ctx.fillStyle = '#00FF00'
+    ctx.fillRect(canvas.width / 2 + 10, middleY + 35, 100, 30)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = 'bold 14px Arial'
+    ctx.fillText('⚡ 激活', canvas.width / 2 + 60, middleY + 55)
   }
   
   // 玩家 2 区域（下方，横屏）
@@ -407,29 +415,82 @@ wx.onTouchStart((res) => {
   const middleY = player1Y + cardSize + 30
   const player2Y = middleY + cardSize + 40
   
+  // 检查按钮点击（取消/激活）
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
-    if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 &&
+    // 取消按钮
+    if (x >= canvas.width / 2 - 110 && x <= canvas.width / 2 - 10 &&
         y >= middleY + 35 && y <= middleY + 65) {
       cancelSelection()
       return
     }
+    // 激活按钮
+    if (x >= canvas.width / 2 + 10 && x <= canvas.width / 2 + 110 &&
+        y >= middleY + 35 && y <= middleY + 65) {
+      activateSelectedCard()
+      return
+    }
   }
   
+  // 检查卡牌点击
   gameState.player1.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player1Y && y <= player1Y + cardSize) {
-      if (card) handleCardClick(1, index)  // 只有有牌才能点击
+      if (card) selectCard(1, index)  // 只选中，不触发
     }
   })
   
   gameState.player2.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player2Y && y <= player2Y + cardSize) {
-      if (card) handleCardClick(2, index)  // 只有有牌才能点击
+      if (card) selectCard(2, index)  // 只选中，不触发
     }
   })
 })
 
+// 选中卡牌（不触发）
+function selectCard(player, index) {
+  if (gameState.gameOver) return
+  
+  const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
+  const card = hand[index]
+  
+  if (!card || card.triggered) return
+  
+  // 如果正在等待能力目标或连线
+  if (gameState.waitingForAbility && gameState.selectedCard) {
+    handleAbilityTarget(player, index)
+    return
+  }
+  
+  if (gameState.waitingForChain && gameState.chainCards.length > 0) {
+    continueChain(player, index)
+    return
+  }
+  
+  // 选中卡牌
+  gameState.selectedCard = { player, index, card }
+  addLog(`选中 ${card.attrEmoji} - 点击⚡激活`)
+  render()
+}
+
+// 激活选中的卡牌
+function activateSelectedCard() {
+  if (!gameState.selectedCard) return
+  
+  const { player, index, card } = gameState.selectedCard
+  
+  if (card.ability) {
+    gameState.waitingForAbility = true
+    addLog(`使用能力：${card.ability.icon} ${card.ability.name}`)
+  } else {
+    triggerCard(player, index)
+    checkChain(player, index)
+  }
+  
+  render()
+}
+
+// 处理卡牌点击（用于能力目标和连线）
 function handleCardClick(player, index) {
   if (gameState.gameOver) return
   
@@ -447,19 +508,6 @@ function handleCardClick(player, index) {
     continueChain(player, index)
     return
   }
-  
-  gameState.selectedCard = { player, index, card }
-  addLog(`选择了 ${card.attrEmoji}`)
-  
-  if (card.ability) {
-    gameState.waitingForAbility = true
-    addLog(`使用能力：${card.ability.icon} ${card.ability.name}`)
-  } else {
-    triggerCard(player, index)
-    checkChain(player, index)
-  }
-  
-  render()
 }
 
 function triggerCard(player, index) {
@@ -625,12 +673,9 @@ function handleAbilityTarget(player, index) {
 }
 
 function cancelSelection() {
+  if (gameState.waitingForAbility || gameState.waitingForChain) return  // 能力/连线中不能取消
+  
   gameState.selectedCard = null
-  gameState.waitingForAbility = false
-  gameState.waitingForChain = false
-  gameState.chainCards = []
-  gameState.abilityTarget1 = null
-  gameState.abilityTarget2 = null
   addLog('❌ 取消选择')
   render()
 }
