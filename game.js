@@ -1,6 +1,8 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
- * 版本：v3.23 - BUG 修复版
+ * 版本：v1.0 - 首发版
+ * 平台：微信小程序
+ * 日期：2026-03-13
  */
 
 const CONFIG = {
@@ -153,7 +155,7 @@ function generateDeck() {
 }
 
 function initGame() {
-  console.log('初始化游戏 v3.23')
+  console.log('🔗 1V1 连线桌游 v1.0 - 初始化')
   
   gameState.player1 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
   gameState.player2 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
@@ -196,7 +198,7 @@ function render() {
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('🔗 1V1 连线桌游', canvas.width / 2, safeTop + 20)
+  ctx.fillText('🔗 1V1 连线桌游', canvas.width / 2, safeTop + 25)
   
   const cardSize = CONFIG.CARD_SIZE
   const cardGap = 8
