@@ -120,7 +120,13 @@ let gameState = {
 // Canvas 和上下文
 const canvas = wx.createCanvas()
 const ctx = canvas.getContext('2d')
+
+// 设置 Canvas 尺寸为屏幕尺寸
 const { windowWidth, windowHeight } = wx.getSystemInfoSync()
+canvas.width = windowWidth
+canvas.height = windowHeight
+
+console.log(`Canvas 尺寸：${canvas.width}x${canvas.height}`)
 
 // 创建卡牌
 function createCard(data) {
@@ -133,7 +139,9 @@ function createCard(data) {
     arrow: data.arrow,
     triggered: false,
     ability: data.abilityId ? CONFIG.ABILITIES.find(a => a.id === data.abilityId) : null,
-    attrEmoji: CONFIG.ATTR_EMOJIS[data.attr]
+    attrEmoji: CONFIG.ATTR_EMOJIS[data.attr],
+    width: 60,
+    height: 84
   }
 }
 
