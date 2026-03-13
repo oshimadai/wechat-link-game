@@ -199,8 +199,11 @@ function initGame() {
 }
 
 function refillHand(player) {
-  while (player.hand.length < CONFIG.HAND_SIZE && player.deck.length > 0) {
-    player.hand.push(player.deck.pop())
+  // 补充至 5 张牌（填补空位）
+  for (let i = 0; i < CONFIG.HAND_SIZE; i++) {
+    if (!player.hand[i] && player.deck.length > 0) {
+      player.hand[i] = player.deck.pop()
+    }
   }
 }
 
@@ -227,7 +230,7 @@ function render() {
   const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   const startX = (canvas.width - totalWidth) / 2
   
-  // 玩家 1 区域（上方）
+  // 玩家 1 区域（上方，横屏）
   const player1Y = safeTop + 50
   const isPlayer1Turn = gameState.currentPlayer === 1
   ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
@@ -239,9 +242,19 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player1.score}分 | 扣：${gameState.player1.penalty}`, startX + totalWidth / 2, player1Y + 8)
   
-  // 玩家 1 手牌（横向一排）
+  // 玩家 1 手牌（横向一排，空位保留）
   gameState.player1.hand.forEach((card, index) => {
-    if (card) drawCard(card, startX + index * (cardSize + cardGap), player1Y, 'down')
+    if (card) {
+      drawCard(card, startX + index * (cardSize + cardGap), player1Y, 'down')
+    } else {
+      // 绘制空位
+      const x = startX + index * (cardSize + cardGap)
+      ctx.strokeStyle = '#666666'
+      ctx.lineWidth = 2
+      ctx.setLineDash([5, 5])
+      ctx.strokeRect(x, player1Y, cardSize, cardSize)
+      ctx.setLineDash([])
+    }
   })
   
   // 中间信息
@@ -276,7 +289,7 @@ function render() {
     ctx.fillText('❌ 取消', canvas.width / 2, middleY + 55)
   }
   
-  // 玩家 2 区域（下方）
+  // 玩家 2 区域（下方，横屏）
   const player2Y = middleY + cardSize + 40
   const isPlayer2Turn = gameState.currentPlayer === 2
   ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
@@ -288,9 +301,19 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, startX + totalWidth / 2, player2Y + 8)
   
-  // 玩家 2 手牌（横向一排）
+  // 玩家 2 手牌（横向一排，空位保留）
   gameState.player2.hand.forEach((card, index) => {
-    if (card) drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
+    if (card) {
+      drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
+    } else {
+      // 绘制空位
+      const x = startX + index * (cardSize + cardGap)
+      ctx.strokeStyle = '#666666'
+      ctx.lineWidth = 2
+      ctx.setLineDash([5, 5])
+      ctx.strokeRect(x, player2Y, cardSize, cardSize)
+      ctx.setLineDash([])
+    }
   })
   
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
@@ -395,14 +418,14 @@ wx.onTouchStart((res) => {
   gameState.player1.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player1Y && y <= player1Y + cardSize) {
-      handleCardClick(1, index)
+      if (card) handleCardClick(1, index)  // 只有有牌才能点击
     }
   })
   
   gameState.player2.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player2Y && y <= player2Y + cardSize) {
-      handleCardClick(2, index)
+      if (card) handleCardClick(2, index)  // 只有有牌才能点击
     }
   })
 })
@@ -445,7 +468,8 @@ function triggerCard(player, index) {
   
   if (!card || card.triggered) return
   
-  card.triggered = true
+  // 触发后从手牌移除（放入得分区）
+  hand[index] = null
   gameState.triggeredCards.push({ ...card })
   
   const points = card.score
@@ -465,40 +489,37 @@ function checkChain(player, index) {
   let nextIndex = null
   
   if (arrow === '←') {
+    // 向左，穿过空位
     for (let i = index - 1; i >= 0; i--) {
-      if (hand[i]) {
-        if (!hand[i].triggered && (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild')) {
-          nextIndex = i
-          break
-        } else if (hand[i].triggered) {
-          continue
-        } else {
-          break
-        }
+      if (hand[i] === null) continue  // 空位，继续
+      if (hand[i].triggered) break  // 已触发，停止
+      if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+        nextIndex = i
+        break
+      } else {
+        break  // 不同属性，停止
       }
     }
   } else if (arrow === '→') {
+    // 向右，穿过空位
     for (let i = index + 1; i < hand.length; i++) {
-      if (hand[i]) {
-        if (!hand[i].triggered && (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild')) {
-          nextIndex = i
-          break
-        } else if (hand[i].triggered) {
-          continue
-        } else {
-          break
-        }
+      if (hand[i] === null) continue  // 空位，继续
+      if (hand[i].triggered) break  // 已触发，停止
+      if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+        nextIndex = i
+        break
+      } else {
+        break  // 不同属性，停止
       }
     }
   } else if (arrow === '↑' || arrow === '↓') {
+    // 上下方向，连对手
     const opponentHand = player === 1 ? gameState.player2.hand : gameState.player1.hand
-    nextIndex = index
-    
-    if (opponentHand[nextIndex] && !opponentHand[nextIndex].triggered &&
-        (card.attr === opponentHand[nextIndex].attr || card.attr === 'wild' || opponentHand[nextIndex].attr === 'wild')) {
+    if (opponentHand[index] && !opponentHand[index].triggered &&
+        (card.attr === opponentHand[index].attr || card.attr === 'wild' || opponentHand[index].attr === 'wild')) {
       gameState.waitingForChain = true
-      gameState.chainCards = [{ player: player === 1 ? 2 : 1, index: nextIndex, isOpponent: true }]
-      addLog(`点击对手${opponentHand[nextIndex].attrEmoji}继续连线`)
+      gameState.chainCards = [{ player: player === 1 ? 2 : 1, index: index, isOpponent: true }]
+      addLog(`点击对手${opponentHand[index].attrEmoji}继续连线`)
       render()
       return
     }
@@ -617,8 +638,8 @@ function cancelSelection() {
 function applyDecay(hand) {
   const arrowMap = { '↑': '→', '→': '↓', '↓': '←', '←': '↑' }
   
-  hand.forEach(card => {
-    if (!card.triggered && card.hp !== '∞') {
+  hand.forEach((card, index) => {
+    if (card && !card.triggered && card.hp !== '∞') {
       // 箭头顺时针旋转 90°
       card.arrow = arrowMap[card.arrow]
       
@@ -627,6 +648,7 @@ function applyDecay(hand) {
       if (newHp <= 0) {
         card.hp = 0
         card.triggered = true
+        hand[index] = null  // 从手牌移除
         if (card.maxHp > 0) {
           const player = hand === gameState.player1.hand ? gameState.player1 : gameState.player2
           player.penalty += 1
