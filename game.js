@@ -1,19 +1,13 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
  * 版本：v1.0 - 首发版
- * 平台：微信小程序
+ * 规则版本：完整规则书
  * 日期：2026-03-13
- * 
- * 核心规则:
- * - 每名玩家 5 张手牌
- * - 左右布局，面对面
- * - 箭头指向决定连线
- * - 同属性才能连线
  */
 
 const CONFIG = {
-  WIN_SCORE: 30,
-  HAND_SIZE: 5,  // 每名玩家 5 张牌
+  WIN_SCORE: 40,
+  HAND_SIZE: 5,
   CARD_SIZE: 70,
   CARD_GAP: 8,
   ATTRS: ['fire', 'water', 'wood', 'wild'],
@@ -24,80 +18,97 @@ const CONFIG = {
     wood: '🌿',
     wild: '🌈'
   },
-  ABILITIES: [
-    { id: 1, name: '旋转', icon: '🔄', desc: '选择一张牌顺时针旋转 90°' },
-    { id: 2, name: '变色', icon: '🎨', desc: '选择一张牌变为激活卡牌的属性' },
-    { id: 3, name: '换位', icon: '💫', desc: '选择两张牌交换位置' }
-  ]
+  SCORE_RULES: {
+    '4': 1,
+    '3': 2,
+    '2': 3,
+    '1': 0,
+    '∞': 1
+  }
 }
 
 const FIXED_DECK = [
-  { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 1 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 2 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 2 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 3 },
-  { attr: 'fire', hp: 3, score: 1, arrow: '←', abilityId: 1 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '→', abilityId: 1 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 2 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 3 },
-  { attr: 'fire', hp: 2, score: 2, arrow: '←', abilityId: 1 },
-  { attr: 'fire', hp: 1, score: 3, arrow: '→', abilityId: 1 },
-  { attr: 'fire', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
-  { attr: 'fire', hp: 1, score: 3, arrow: '↓', abilityId: 3 },
-  { attr: 'fire', hp: 0, score: 0, arrow: '←', abilityId: 1 },
-  { attr: 'fire', hp: '∞', score: 1, arrow: '→', abilityId: null },
-  { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 1 },
-  { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 2 },
-  { attr: 'water', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
-  { attr: 'water', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 2 },
-  { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 3 },
-  { attr: 'water', hp: 3, score: 1, arrow: '←', abilityId: 1 },
-  { attr: 'water', hp: 2, score: 2, arrow: '→', abilityId: 1 },
-  { attr: 'water', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'water', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
-  { attr: 'water', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 2 },
-  { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 3 },
-  { attr: 'water', hp: 2, score: 2, arrow: '←', abilityId: 1 },
-  { attr: 'water', hp: 1, score: 3, arrow: '→', abilityId: 1 },
-  { attr: 'water', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
-  { attr: 'water', hp: 1, score: 3, arrow: '↓', abilityId: 3 },
-  { attr: 'water', hp: 0, score: 0, arrow: '←', abilityId: 1 },
-  { attr: 'water', hp: '∞', score: 1, arrow: '→', abilityId: null },
-  { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 1 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 2 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '→', abilityId: 3 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↑', abilityId: 1 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↑', abilityId: 2 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↓', abilityId: 3 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '↓', abilityId: 1 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 2 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 3 },
-  { attr: 'wood', hp: 3, score: 1, arrow: '←', abilityId: 1 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '→', abilityId: 1 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '→', abilityId: 2 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '↑', abilityId: 3 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '↓', abilityId: 1 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 2 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 3 },
-  { attr: 'wood', hp: 2, score: 2, arrow: '←', abilityId: 1 },
-  { attr: 'wood', hp: 1, score: 3, arrow: '→', abilityId: 1 },
-  { attr: 'wood', hp: 1, score: 3, arrow: '↑', abilityId: 2 },
-  { attr: 'wood', hp: 1, score: 3, arrow: '↓', abilityId: 3 },
-  { attr: 'wood', hp: 0, score: 0, arrow: '←', abilityId: 1 },
-  { attr: 'wood', hp: '∞', score: 1, arrow: '→', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'fire', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'fire', hp: 3, score: 2, arrow: '→', abilityId: 1 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '←', abilityId: 3 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '←', abilityId: 1 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'fire', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'fire', hp: 2, score: 3, arrow: '→', abilityId: 1 },
+  { attr: 'fire', hp: 2, score: 3, arrow: '↑', abilityId: 2 },
+  { attr: 'fire', hp: 2, score: 3, arrow: '↓', abilityId: 3 },
+  { attr: 'fire', hp: 1, score: 0, arrow: '←', abilityId: 1 },
+  { attr: 'fire', hp: '∞', score: 1, arrow: '↑', abilityId: null },
+  { attr: 'fire', hp: '∞', score: 1, arrow: '↓', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'water', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'water', hp: 3, score: 2, arrow: '→', abilityId: 1 },
+  { attr: 'water', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'water', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'water', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'water', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'water', hp: 3, score: 2, arrow: '←', abilityId: 3 },
+  { attr: 'water', hp: 3, score: 2, arrow: '←', abilityId: 1 },
+  { attr: 'water', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'water', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'water', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'water', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'water', hp: 2, score: 3, arrow: '→', abilityId: 1 },
+  { attr: 'water', hp: 2, score: 3, arrow: '↑', abilityId: 2 },
+  { attr: 'water', hp: 2, score: 3, arrow: '↓', abilityId: 3 },
+  { attr: 'water', hp: 1, score: 0, arrow: '←', abilityId: 1 },
+  { attr: 'water', hp: '∞', score: 1, arrow: '↑', abilityId: null },
+  { attr: 'water', hp: '∞', score: 1, arrow: '↓', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '→', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '↑', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '↓', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'wood', hp: 4, score: 1, arrow: '←', abilityId: null },
+  { attr: 'wood', hp: 3, score: 2, arrow: '→', abilityId: 1 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '←', abilityId: 3 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '←', abilityId: 1 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '→', abilityId: 2 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '↑', abilityId: 3 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '↓', abilityId: 1 },
+  { attr: 'wood', hp: 3, score: 2, arrow: '←', abilityId: 2 },
+  { attr: 'wood', hp: 2, score: 3, arrow: '→', abilityId: 1 },
+  { attr: 'wood', hp: 2, score: 3, arrow: '↑', abilityId: 2 },
+  { attr: 'wood', hp: 2, score: 3, arrow: '↓', abilityId: 3 },
+  { attr: 'wood', hp: 1, score: 0, arrow: '←', abilityId: 1 },
+  { attr: 'wood', hp: '∞', score: 1, arrow: '↑', abilityId: null },
+  { attr: 'wood', hp: '∞', score: 1, arrow: '↓', abilityId: null },
   { attr: 'wild', hp: 3, score: 1, arrow: '→', abilityId: null },
   { attr: 'wild', hp: 3, score: 1, arrow: '↑', abilityId: null },
   { attr: 'wild', hp: 3, score: 1, arrow: '↓', abilityId: null },
@@ -143,7 +154,7 @@ function createCard(data) {
     score: data.score,
     arrow: data.arrow,
     triggered: false,
-    ability: data.abilityId ? CONFIG.ABILITIES.find(a => a.id === data.abilityId) : null,
+    ability: data.abilityId ? { id: data.abilityId, name: ['旋转', '变色', '换位'][data.abilityId - 1], icon: ['🔄', '🎨', '💫'][data.abilityId - 1] } : null,
     attrEmoji: CONFIG.ATTR_EMOJIS[data.attr],
     width: CONFIG.CARD_SIZE,
     height: CONFIG.CARD_SIZE
@@ -203,11 +214,9 @@ function addLog(message) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   
-  // 背景
   ctx.fillStyle = '#2C3E50'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   
-  // 标题
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
@@ -230,7 +239,6 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player1.score}分 | 扣：${gameState.player1.penalty}`, startX + totalWidth / 2, player1Y + 8)
   
-  // 玩家 1 手牌（横向排列，从左到右）
   gameState.player1.hand.forEach((card, index) => {
     if (card) drawCard(card, startX + index * (cardSize + cardGap), player1Y, 'down')
   })
@@ -247,7 +255,6 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, startX + totalWidth / 2, player2Y + 8)
   
-  // 玩家 2 手牌（横向排列，从左到右）
   gameState.player2.hand.forEach((card, index) => {
     if (card) drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
   })
@@ -263,7 +270,6 @@ function render() {
   ctx.font = 'bold 20px Arial'
   ctx.fillText(`▶ 玩家${gameState.currentPlayer} ◀`, canvas.width / 2, middleY + 25)
   
-  // 能力提示
   if (gameState.waitingForAbility && gameState.selectedCard) {
     const ability = gameState.selectedCard.card.ability
     ctx.fillStyle = '#00FF00'
@@ -271,14 +277,12 @@ function render() {
     ctx.fillText(`${ability.icon} ${ability.name}: 点击目标卡牌`, canvas.width / 2, middleY + 50)
   }
   
-  // 连线提示
   if (gameState.waitingForChain && gameState.chainCards.length > 0) {
     ctx.fillStyle = '#00FF00'
     ctx.font = 'bold 14px Arial'
     ctx.fillText(`点击继续连线`, canvas.width / 2, middleY + 50)
   }
   
-  // 取消按钮
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
     ctx.fillStyle = '#FF6B6B'
     ctx.fillRect(canvas.width / 2 - 50, middleY + 35, 100, 30)
@@ -287,7 +291,6 @@ function render() {
     ctx.fillText('❌ 取消', canvas.width / 2, middleY + 55)
   }
   
-  // 游戏日志
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
   ctx.fillRect(canvas.width / 2 - 120, canvas.height - safeBottom - 50, 240, 40)
   ctx.fillStyle = '#FFFFFF'
@@ -300,7 +303,7 @@ function render() {
   ctx.fillStyle = '#AAAAAA'
   ctx.font = '11px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('点击卡牌 • 左右连线', canvas.width / 2, canvas.height - safeBottom - 10)
+  ctx.fillText('点击卡牌 • 上下可连对手 • 左右穿空位', canvas.width / 2, canvas.height - safeBottom - 10)
 }
 
 function drawCard(card, x, y, direction) {
@@ -309,17 +312,14 @@ function drawCard(card, x, y, direction) {
   const centerX = x + card.width / 2
   const centerY = y + card.height / 2
   
-  if (direction === 'right') {
+  if (direction === 'down') {
     ctx.translate(centerX, centerY)
-    ctx.rotate(Math.PI / 2)
+    ctx.rotate(Math.PI)
     ctx.translate(-centerX, -centerY)
-  } else if (direction === 'left') {
-    ctx.translate(centerX, centerY)
-    ctx.rotate(-Math.PI / 2)
-    ctx.translate(-centerX, -centerY)
+  } else if (direction === 'up') {
+    // 不旋转
   }
   
-  // 背景
   const colors = {
     fire: '#FF6464',
     water: '#6464FF',
@@ -329,42 +329,35 @@ function drawCard(card, x, y, direction) {
   ctx.fillStyle = colors[card.attr] || '#FFFFFF'
   ctx.fillRect(x, y, card.width, card.height)
   
-  // 边框
   const isSelected = gameState.selectedCard && gameState.selectedCard.card === card
   ctx.strokeStyle = isSelected ? '#FFD700' : '#FFFFFF'
   ctx.lineWidth = isSelected ? 4 : 2
   ctx.strokeRect(x, y, card.width, card.height)
   
-  // 已触发标记
   if (card.triggered) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'
     ctx.fillRect(x, y, card.width, card.height)
   }
   
-  // 属性
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 20px Arial'
   ctx.textAlign = 'center'
   ctx.fillText(card.attrEmoji, x + card.width / 2, y + 24)
   
-  // 箭头
   ctx.font = 'bold 36px Arial'
   ctx.fillStyle = '#FFFFFF'
   ctx.fillText(card.arrow, x + card.width / 2, y + card.height / 2 + 12)
   
-  // 血量
   ctx.font = 'bold 10px Arial'
   ctx.textAlign = 'left'
   const hpText = card.hp === '∞' ? '∞' : `HP:${card.hp}`
   ctx.fillText(hpText, x + 4, y + 14)
   
-  // 分数
   ctx.font = 'bold 12px Arial'
   ctx.textAlign = 'center'
   ctx.fillStyle = '#FFFFFF'
   ctx.fillText(`+${card.score}`, x + card.width / 2, y + card.height - 10)
   
-  // 能力图标
   if (card.ability) {
     ctx.font = '14px Arial'
     ctx.fillText(card.ability.icon, x + card.width - 12, y + 14)
@@ -385,10 +378,8 @@ wx.onTouchStart((res) => {
   const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   const startX = (canvas.width - totalWidth) / 2
   
-  // 玩家 1 区域
   const player1Y = safeTop + 50
   
-  // 检查取消按钮
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
     if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 &&
         y >= player1Y + cardSize + 45 && y <= player1Y + cardSize + 75) {
@@ -397,7 +388,6 @@ wx.onTouchStart((res) => {
     }
   }
   
-  // 检查玩家 1 手牌（横向）
   gameState.player1.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player1Y && y <= player1Y + cardSize) {
@@ -405,10 +395,8 @@ wx.onTouchStart((res) => {
     }
   })
   
-  // 玩家 2 区域
   const player2Y = player1Y + cardSize + 60
   
-  // 检查玩家 2 手牌（横向）
   gameState.player2.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= player2Y && y <= player2Y + cardSize) {
@@ -474,31 +462,44 @@ function checkChain(player, index) {
   const arrow = card.arrow
   let nextIndex = null
   
-  // 横向手牌，根据箭头方向找下一张牌
   if (arrow === '←') {
-    // 指向左边
     for (let i = index - 1; i >= 0; i--) {
-      if (hand[i] && !hand[i].triggered) {
-        if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+      if (hand[i]) {
+        if (!hand[i].triggered && (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild')) {
           nextIndex = i
+          break
+        } else if (hand[i].triggered) {
+          continue
+        } else {
           break
         }
       }
     }
   } else if (arrow === '→') {
-    // 指向右边
     for (let i = index + 1; i < hand.length; i++) {
-      if (hand[i] && !hand[i].triggered) {
-        if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+      if (hand[i]) {
+        if (!hand[i].triggered && (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild')) {
           nextIndex = i
+          break
+        } else if (hand[i].triggered) {
+          continue
+        } else {
           break
         }
       }
     }
   } else if (arrow === '↑' || arrow === '↓') {
-    // 指向上/下，指向对方玩家（无法连线）
-    endTurn(player)
-    return
+    const opponentHand = player === 1 ? gameState.player2.hand : gameState.player1.hand
+    nextIndex = index
+    
+    if (opponentHand[nextIndex] && !opponentHand[nextIndex].triggered &&
+        (card.attr === opponentHand[nextIndex].attr || card.attr === 'wild' || opponentHand[nextIndex].attr === 'wild')) {
+      gameState.waitingForChain = true
+      gameState.chainCards = [{ player: player === 1 ? 2 : 1, index: nextIndex, isOpponent: true }]
+      addLog(`点击对手${opponentHand[nextIndex].attrEmoji}继续连线`)
+      render()
+      return
+    }
   }
   
   if (nextIndex !== null) {
@@ -525,7 +526,7 @@ function continueChain(player, index) {
 function endTurn(player) {
   addLog(`--- 回合结束 ---`)
   
-  // 衰减阶段
+  // 衰减阶段：血量 -1 + 箭头旋转
   applyDecay(gameState.player1.hand)
   applyDecay(gameState.player2.hand)
   
@@ -612,8 +613,14 @@ function cancelSelection() {
 }
 
 function applyDecay(hand) {
+  const arrowMap = { '↑': '→', '→': '↓', '↓': '←', '←': '↑' }
+  
   hand.forEach(card => {
     if (!card.triggered && card.hp !== '∞') {
+      // 箭头顺时针旋转 90°
+      card.arrow = arrowMap[card.arrow]
+      
+      // 血量 -1
       const newHp = typeof card.hp === 'number' ? card.hp - 1 : card.hp
       if (newHp <= 0) {
         card.hp = 0
