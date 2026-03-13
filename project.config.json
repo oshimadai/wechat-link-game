@@ -1,5 +1,5 @@
 {
-  "description": "1V1 连线桌游 - 微信小游戏",
+  "description": "1V1 连线桌游微信小程序 v3.22",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -36,9 +36,9 @@
       "outputPath": ""
     }
   },
-  "compileType": "game",
-  "libVersion": "3.3.4",
-  "appid": "wx98403ae97ba7bea1",
+  "compileType": "miniprogram",
+  "libVersion": "2.19.4",
+  "appid": "wxxxxxxxxxxx",
   "projectname": "wechat-link-game",
   "condition": {},
   "editorSetting": {

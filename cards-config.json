@@ -1,0 +1,46 @@
+{
+  "version": "3.22",
+  "gameName": "1V1 连线桌游",
+  "totalCards": 70,
+  "handSize": 5,
+  "gridSize": {
+    "cols": 5,
+    "rows": 2
+  },
+  "winScore": 20,
+  "cardsPerAttribute": 22,
+  "hpDistribution": {
+    "0": {"percentage": 5, "perAttr": 1},
+    "1": {"percentage": 15, "perAttr": 3},
+    "2": {"percentage": 35, "perAttr": 7},
+    "3": {"percentage": 45, "perAttr": 11}
+  },
+  "scoreRules": {
+    "3": 1,
+    "2": 2,
+    "1": 3,
+    "0": 0,
+    "infinity": 1
+  },
+  "specialCards": {
+    "infinity": {"count": 3, "hp": "∞"},
+    "wild": {"count": 4, "hp": 3}
+  },
+  "abilities": {
+    "1": {"icon": "🔄", "name": "旋转", "description": "选择一张牌顺时针旋转 90°"},
+    "2": {"icon": "🎨", "name": "变色", "description": "选择一张牌变为激活卡牌的属性"},
+    "3": {"icon": "💫", "name": "换位", "description": "选择两张牌交换位置"}
+  },
+  "summary": {
+    "fire": {"normal": 21, "infinite": 1, "total": 22},
+    "water": {"normal": 21, "infinite": 1, "total": 22},
+    "wood": {"normal": 21, "infinite": 1, "total": 22},
+    "wild": {"normal": 4, "infinite": 0, "total": 4},
+    "grandTotal": 70
+  },
+  "layout": {
+    "type": "vertical",
+    "player2Rotate": 180,
+    "description": "上下布局，玩家 2 旋转 180°面对面"
+  }
+}
