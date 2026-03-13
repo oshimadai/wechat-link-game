@@ -227,7 +227,7 @@ function render() {
   const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   const startX = (canvas.width - totalWidth) / 2
   
-  // 玩家 1 区域（上半部分）
+  // 玩家 1 区域（上方）
   const player1Y = safeTop + 50
   const isPlayer1Turn = gameState.currentPlayer === 1
   ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
@@ -239,28 +239,13 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player1.score}分 | 扣：${gameState.player1.penalty}`, startX + totalWidth / 2, player1Y + 8)
   
+  // 玩家 1 手牌（横向一排）
   gameState.player1.hand.forEach((card, index) => {
     if (card) drawCard(card, startX + index * (cardSize + cardGap), player1Y, 'down')
   })
   
-  // 玩家 2 区域（下半部分）
-  const player2Y = player1Y + cardSize + 60
-  const isPlayer2Turn = gameState.currentPlayer === 2
-  ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
-  ctx.font = 'bold 18px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 2`, startX + totalWidth / 2, player2Y - 10)
-  
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font = '14px Arial'
-  ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, startX + totalWidth / 2, player2Y + 8)
-  
-  gameState.player2.hand.forEach((card, index) => {
-    if (card) drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
-  })
-  
   // 中间信息
-  const middleY = player1Y + cardSize + 25
+  const middleY = player1Y + cardSize + 30
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'center'
@@ -291,19 +276,36 @@ function render() {
     ctx.fillText('❌ 取消', canvas.width / 2, middleY + 55)
   }
   
+  // 玩家 2 区域（下方）
+  const player2Y = middleY + cardSize + 40
+  const isPlayer2Turn = gameState.currentPlayer === 2
+  ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
+  ctx.font = 'bold 18px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`👤 玩家 2`, startX + totalWidth / 2, player2Y - 10)
+  
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '14px Arial'
+  ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, startX + totalWidth / 2, player2Y + 8)
+  
+  // 玩家 2 手牌（横向一排）
+  gameState.player2.hand.forEach((card, index) => {
+    if (card) drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
+  })
+  
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-  ctx.fillRect(canvas.width / 2 - 120, canvas.height - safeBottom - 50, 240, 40)
+  ctx.fillRect(canvas.width / 2 - 120, player2Y + cardSize + 10, 240, 40)
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '10px Arial'
   ctx.textAlign = 'left'
   gameState.gameLog.slice(0, 2).forEach((log, index) => {
-    ctx.fillText(log.substring(0, 18), canvas.width / 2 - 110, canvas.height - safeBottom - 35 + index * 12)
+    ctx.fillText(log.substring(0, 18), canvas.width / 2 - 110, player2Y + cardSize + 25 + index * 12)
   })
   
   ctx.fillStyle = '#AAAAAA'
   ctx.font = '11px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('点击卡牌 • 上下可连对手 • 左右穿空位', canvas.width / 2, canvas.height - safeBottom - 10)
+  ctx.fillText('点击卡牌 • 上下可连对手 • 左右穿空位', canvas.width / 2, player2Y + cardSize + 55)
 }
 
 function drawCard(card, x, y, direction) {
@@ -379,10 +381,12 @@ wx.onTouchStart((res) => {
   const startX = (canvas.width - totalWidth) / 2
   
   const player1Y = safeTop + 50
+  const middleY = player1Y + cardSize + 30
+  const player2Y = middleY + cardSize + 40
   
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.waitingForChain) {
     if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 &&
-        y >= player1Y + cardSize + 45 && y <= player1Y + cardSize + 75) {
+        y >= middleY + 35 && y <= middleY + 65) {
       cancelSelection()
       return
     }
@@ -394,8 +398,6 @@ wx.onTouchStart((res) => {
       handleCardClick(1, index)
     }
   })
-  
-  const player2Y = player1Y + cardSize + 60
   
   gameState.player2.hand.forEach((card, index) => {
     const cardX = startX + index * (cardSize + cardGap)
