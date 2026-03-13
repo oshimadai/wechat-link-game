@@ -142,7 +142,10 @@ function generateDeck() {
   const deck = FIXED_DECK.map(data => createCard(data))
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    [deck[i], deck[j]] = [deck[j], deck[i]]
+    // 使用传统交换方式，避免解构赋值
+    const temp = deck[i]
+    deck[i] = deck[j]
+    deck[j] = temp
   }
   return deck
 }
