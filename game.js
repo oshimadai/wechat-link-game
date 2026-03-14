@@ -1,16 +1,15 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
- * 版本：v3.23b - 自动消除 + 左右布局 + 回合限制
+ * 版本：v3.24 - 指定布局 + 自动消除
  * 规则版本：完整规则书
  * 日期：2026-03-14
  * 
- * v3.23b 修复:
- * - BUG-002: 激活后系统自动完成所有连线消除（当前回合玩家不能操作，对手可以观看）
- * - BUG-003: 改为左右布局（玩家 1 在左，玩家 2 在右，面对面）
- * - 新增：autoChainPlayer 记录当前不能操作的玩家
+ * v3.24 修复:
+ * - 布局：按照用户指定方案（P1 左/P2 右，纵向手牌）
+ * - 标题：🔗 1V1 连线桌游 v3.24
  * 
- * v3.23 修复:
- * - BUG-002: 激活后系统自动完成所有连线消除
+ * v3.23b 修复:
+ * - BUG-002: 激活后系统自动完成所有连线消除（当前回合玩家不能操作）
  * - BUG-003: 改为左右布局
  */
 
@@ -229,134 +228,119 @@ function render() {
   ctx.fillStyle = '#2C3E50'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 18px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText('🔗 1V1 连线桌游 v3.23 - 左右布局', canvas.width / 2, safeTop + 20)
-  
   const cardSize = CONFIG.CARD_SIZE
   const cardGap = CONFIG.CARD_GAP
   const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   
-  // 左右布局 - 修复 BUG-003
+  // 布局按照用户指定方案
   const centerX = canvas.width / 2
-  const centerY = safeTop + 100
+  const headerY = safeTop + 30
+  const infoY = safeTop + 60
+  const handStartY = safeTop + 100
   
-  // 玩家 1 区域（左侧，旋转 90°）- 修复 BUG-003
-  const player1X = centerX - totalWidth - 30
-  const isPlayer1Turn = gameState.currentPlayer === 1
-  ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
+  // 顶部标题
+  ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.save()
-  ctx.translate(player1X + totalWidth / 2, centerY - 20)
-  ctx.rotate(-Math.PI / 2)
-  ctx.fillText(`👤 玩家 1 (你)`, 0, 0)
-  ctx.restore()
+  ctx.fillText('🔗 1V1 连线桌游 v3.24', centerX, headerY)
+  
+  // 玩家 1 区域（左侧）
+  const player1X = centerX - 150
+  const isPlayer1Turn = gameState.currentPlayer === 1
+  ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
+  ctx.font = 'bold 16px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`👤 P1`, player1X, infoY - 10)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText(`${gameState.player1.score}分`, player1X + totalWidth / 2, centerY - 40)
+  ctx.fillText(`${gameState.player1.score}分`, player1X, infoY + 10)
+  ctx.fillText(`扣:${gameState.player1.penalty}`, player1X, infoY + 28)
   
   // 玩家 1 手牌（纵向一列）
   gameState.player1.hand.forEach((card, index) => {
     if (card) {
-      drawCard(card, player1X + index * (cardSize + cardGap), centerY, 'right')
+      drawCard(card, player1X - 35, handStartY + index * (cardSize + cardGap), 'right')
     } else {
-      const x = player1X + index * (cardSize + cardGap)
+      const x = player1X - 35
+      const y = handStartY + index * (cardSize + cardGap)
       ctx.strokeStyle = '#666666'
       ctx.lineWidth = 2
       ctx.setLineDash([5, 5])
-      ctx.strokeRect(x, centerY, cardSize, cardSize)
+      ctx.strokeRect(x, y, cardSize, cardSize)
       ctx.setLineDash([])
     }
   })
   
   // 中间信息
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 16px Arial'
+  ctx.font = 'bold 14px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`回合：${gameState.round}`, centerX, safeTop + 40)
+  ctx.fillText(`回合：${gameState.round}`, centerX, infoY)
   
   ctx.fillStyle = '#FFD700'
-  ctx.font = 'bold 20px Arial'
-  ctx.fillText(`▶ 玩家${gameState.currentPlayer} ◀`, centerX, safeTop + 65)
+  ctx.font = 'bold 18px Arial'
+  ctx.fillText(`▶ 玩家${gameState.currentPlayer} ◀`, centerX, infoY + 25)
   
   if (gameState.waitingForAbility && gameState.abilitySourceCard) {
     const ability = gameState.abilitySourceCard.card.ability
     ctx.fillStyle = '#00FF00'
-    ctx.font = 'bold 14px Arial'
-    ctx.fillText(`${ability.icon} ${ability.name}: 点击目标卡牌`, centerX, centerY + cardSize + 60)
+    ctx.font = 'bold 12px Arial'
+    ctx.fillText(`${ability.icon} ${ability.name}`, centerX, infoY + 50)
   }
   
   if (gameState.autoChainMode) {
     ctx.fillStyle = '#00FF00'
-    ctx.font = 'bold 16px Arial'
-    ctx.fillText(`⚡ 自动消除中...`, centerX, centerY + cardSize + 60)
+    ctx.font = 'bold 14px Arial'
+    ctx.fillText(`⚡ 自动消除中`, centerX, infoY + 50)
   }
   
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.autoChainMode) {
-    // 取消按钮
-    ctx.fillStyle = '#FF6B6B'
-    ctx.fillRect(centerX - 110, centerY + cardSize + 40, 100, 30)
-    ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'bold 14px Arial'
-    ctx.fillText('❌ 取消', centerX - 60, centerY + cardSize + 60)
-    
     // 激活按钮
     ctx.fillStyle = '#00FF00'
-    ctx.fillRect(centerX + 10, centerY + cardSize + 40, 100, 30)
+    ctx.fillRect(centerX - 50, infoY + 55, 100, 25)
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'bold 14px Arial'
-    ctx.fillText('⚡ 激活', centerX + 60, centerY + cardSize + 60)
+    ctx.font = 'bold 12px Arial'
+    ctx.fillText('⚡ 激活', centerX, infoY + 72)
   }
   
-  // 玩家 2 区域（右侧，旋转 90°）- 修复 BUG-003
-  const player2X = centerX + 30
+  // 玩家 2 区域（右侧）
+  const player2X = centerX + 150
   const isPlayer2Turn = gameState.currentPlayer === 2
   ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
-  ctx.font = 'bold 18px Arial'
+  ctx.font = 'bold 16px Arial'
   ctx.textAlign = 'center'
-  ctx.save()
-  ctx.translate(player2X + totalWidth / 2, centerY - 20)
-  ctx.rotate(Math.PI / 2)
-  ctx.fillText(`👤 玩家 2 (对手)`, 0, 0)
-  ctx.restore()
+  ctx.fillText(`👤 P2`, player2X, infoY - 10)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText(`${gameState.player2.score}分`, player2X + totalWidth / 2, centerY - 40)
+  ctx.fillText(`${gameState.player2.score}分`, player2X, infoY + 10)
+  ctx.fillText(`扣:${gameState.player2.penalty}`, player2X, infoY + 28)
   
   // 玩家 2 手牌（纵向一列）
   gameState.player2.hand.forEach((card, index) => {
     if (card) {
-      drawCard(card, player2X + index * (cardSize + cardGap), centerY, 'left')
+      drawCard(card, player2X - 35, handStartY + index * (cardSize + cardGap), 'left')
     } else {
-      const x = player2X + index * (cardSize + cardGap)
+      const x = player2X - 35
+      const y = handStartY + index * (cardSize + cardGap)
       ctx.strokeStyle = '#666666'
       ctx.lineWidth = 2
       ctx.setLineDash([5, 5])
-      ctx.strokeRect(x, centerY, cardSize, cardSize)
+      ctx.strokeRect(x, y, cardSize, cardSize)
       ctx.setLineDash([])
     }
   })
   
   // 游戏日志
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-  ctx.fillRect(centerX - 120, safeTop + 80, 240, 40)
+  ctx.fillRect(centerX - 80, canvas.height - safeBottom - 50, 160, 40)
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '10px Arial'
+  ctx.font = '9px Arial'
   ctx.textAlign = 'left'
-  gameState.gameLog.slice(0, 2).forEach((log, index) => {
-    ctx.fillText(log.substring(0, 20), centerX - 110, safeTop + 95 + index * 12)
+  gameState.gameLog.slice(0, 3).forEach((log, index) => {
+    ctx.fillText(log.substring(0, 15), centerX - 75, canvas.height - safeBottom - 35 + index * 11)
   })
-  
-  ctx.fillStyle = '#AAAAAA'
-  ctx.font = '11px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText('点击卡牌 • 左右面对面 • 自动消除', centerX, safeTop + 140)
 }
 
 function drawCard(card, x, y, direction) {
@@ -433,30 +417,23 @@ wx.onTouchStart((res) => {
   
   const cardSize = CONFIG.CARD_SIZE
   const cardGap = CONFIG.CARD_GAP
-  const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   const centerX = canvas.width / 2
-  const centerY = safeTop + 100
+  const infoY = safeTop + 60
+  const handStartY = safeTop + 100
   
-  const player1X = centerX - totalWidth - 30
-  const player2X = centerX + 30
+  const player1X = centerX - 150
+  const player2X = centerX + 150
   
   // 检查是否当前回合玩家正在自动消除中（该玩家不能操作）
   if (gameState.autoChainMode && gameState.autoChainPlayer === gameState.currentPlayer) {
-    addLog(`⚡ ${gameState.currentPlayer === 1 ? '玩家 1' : '玩家 2'} 请等待消除完成...`)
+    addLog(`⚡ ${gameState.currentPlayer === 1 ? 'P1' : 'P2'} 请等待...`)
     return
   }
   
-  // 检查按钮点击（取消/激活）
+  // 检查激活按钮点击
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.autoChainMode) {
-    // 取消按钮
-    if (x >= centerX - 110 && x <= centerX - 10 &&
-        y >= centerY + cardSize + 40 && y <= centerY + cardSize + 70) {
-      cancelSelection()
-      return
-    }
-    // 激活按钮
-    if (x >= centerX + 10 && x <= centerX + 110 &&
-        y >= centerY + cardSize + 40 && y <= centerY + cardSize + 70) {
+    if (x >= centerX - 50 && x <= centerX + 50 &&
+        y >= infoY + 55 && y <= infoY + 80) {
       activateSelectedCard()
       return
     }
@@ -465,11 +442,12 @@ wx.onTouchStart((res) => {
   // 检查卡牌点击（左右布局）- 只能点击自己面前的牌
   const currentPlayer = gameState.currentPlayer
   const currentHand = currentPlayer === 1 ? gameState.player1.hand : gameState.player2.hand
-  const currentX = currentPlayer === 1 ? player1X : player2X
+  const currentX = currentPlayer === 1 ? player1X - 35 : player2X - 35
   
   currentHand.forEach((card, index) => {
-    const cardX = currentX + index * (cardSize + cardGap)
-    if (x >= cardX && x <= cardX + cardSize && y >= centerY && y <= centerY + cardSize) {
+    const cardX = currentX
+    const cardY = handStartY + index * (cardSize + cardGap)
+    if (x >= cardX && x <= cardX + cardSize && y >= cardY && y <= cardY + cardSize) {
       if (card) selectCard(currentPlayer, index)
     }
   })
