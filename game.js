@@ -230,19 +230,19 @@ function render() {
   const totalWidth = CONFIG.HAND_SIZE * cardSize + (CONFIG.HAND_SIZE - 1) * cardGap
   const startX = (canvas.width - totalWidth) / 2
   
-  // 玩家 1 区域（上方，横屏）
-  const player1Y = safeTop + 50
+  // 玩家 1 区域（上方，横屏上下布局）- 修复 BUG-003
+  const player1Y = safeTop + 60
   const isPlayer1Turn = gameState.currentPlayer === 1
   ctx.fillStyle = isPlayer1Turn ? '#FFD700' : '#666666'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 1`, startX + totalWidth / 2, player1Y - 10)
+  ctx.fillText(`👤 玩家 1 (你)`, startX + totalWidth / 2, player1Y - 10)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player1.score}分 | 扣：${gameState.player1.penalty}`, startX + totalWidth / 2, player1Y + 8)
   
-  // 玩家 1 手牌（横向一排，空位保留）
+  // 玩家 1 手牌（横向一排，空位保留）- 旋转 180°面向玩家 2
   gameState.player1.hand.forEach((card, index) => {
     if (card) {
       drawCard(card, startX + index * (cardSize + cardGap), player1Y, 'down')
@@ -297,19 +297,19 @@ function render() {
     ctx.fillText('⚡ 激活', canvas.width / 2 + 60, middleY + 55)
   }
   
-  // 玩家 2 区域（下方，横屏）
-  const player2Y = middleY + cardSize + 40
+  // 玩家 2 区域（下方，横屏上下布局）- 修复 BUG-003
+  const player2Y = middleY + cardSize + 50
   const isPlayer2Turn = gameState.currentPlayer === 2
   ctx.fillStyle = isPlayer2Turn ? '#FFD700' : '#666666'
   ctx.font = 'bold 18px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(`👤 玩家 2`, startX + totalWidth / 2, player2Y - 10)
+  ctx.fillText(`👤 玩家 2 (对手)`, startX + totalWidth / 2, player2Y - 10)
   
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player2.score}分 | 扣：${gameState.player2.penalty}`, startX + totalWidth / 2, player2Y + 8)
   
-  // 玩家 2 手牌（横向一排，空位保留）
+  // 玩家 2 手牌（横向一排，空位保留）- 不旋转，正向显示
   gameState.player2.hand.forEach((card, index) => {
     if (card) {
       drawCard(card, startX + index * (cardSize + cardGap), player2Y, 'up')
@@ -473,20 +473,20 @@ function selectCard(player, index) {
   render()
 }
 
-// 激活选中的卡牌
+// 激活选中的卡牌 - 修复 BUG-001, BUG-002
 function activateSelectedCard() {
   if (!gameState.selectedCard) return
   
   const { player, index, card } = gameState.selectedCard
   
-  if (card.ability) {
-    gameState.waitingForAbility = true
-    addLog(`使用能力：${card.ability.icon} ${card.ability.name}`)
-  } else {
-    triggerCard(player, index)
-    checkChain(player, index)
-  }
+  // 先触发卡牌（计分并从手牌移除）
+  triggerCard(player, index)
   
+  // 然后检查连线
+  checkChain(player, index)
+  
+  // 重置选择
+  gameState.selectedCard = null
   render()
 }
 
@@ -531,9 +531,15 @@ function checkChain(player, index) {
   const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
   const card = hand[index]
   
-  if (!card) return
+  // 卡牌已触发（从手牌移除），需要找到原位置的卡牌
+  // 使用 selectedCard 中保存的原始卡牌信息
+  const originalCard = gameState.selectedCard ? gameState.selectedCard.card : null
+  if (!originalCard) {
+    endTurn(player)
+    return
+  }
   
-  const arrow = card.arrow
+  const arrow = originalCard.arrow
   let nextIndex = null
   
   if (arrow === '←') {
@@ -541,7 +547,7 @@ function checkChain(player, index) {
     for (let i = index - 1; i >= 0; i--) {
       if (hand[i] === null) continue  // 空位，继续
       if (hand[i].triggered) break  // 已触发，停止
-      if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+      if (originalCard.attr === hand[i].attr || originalCard.attr === 'wild' || hand[i].attr === 'wild') {
         nextIndex = i
         break
       } else {
@@ -553,7 +559,7 @@ function checkChain(player, index) {
     for (let i = index + 1; i < hand.length; i++) {
       if (hand[i] === null) continue  // 空位，继续
       if (hand[i].triggered) break  // 已触发，停止
-      if (card.attr === hand[i].attr || card.attr === 'wild' || hand[i].attr === 'wild') {
+      if (originalCard.attr === hand[i].attr || originalCard.attr === 'wild' || hand[i].attr === 'wild') {
         nextIndex = i
         break
       } else {
@@ -564,9 +570,9 @@ function checkChain(player, index) {
     // 上下方向，连对手
     const opponentHand = player === 1 ? gameState.player2.hand : gameState.player1.hand
     if (opponentHand[index] && !opponentHand[index].triggered &&
-        (card.attr === opponentHand[index].attr || card.attr === 'wild' || opponentHand[index].attr === 'wild')) {
+        (originalCard.attr === opponentHand[index].attr || originalCard.attr === 'wild' || opponentHand[index].attr === 'wild')) {
       gameState.waitingForChain = true
-      gameState.chainCards = [{ player: player === 1 ? 2 : 1, index: index, isOpponent: true }]
+      gameState.chainCards = [{ player: player === 1 ? 2 : 1, index: index, isOpponent: true, originalCard }]
       addLog(`点击对手${opponentHand[index].attrEmoji}继续连线`)
       render()
       return
@@ -575,7 +581,7 @@ function checkChain(player, index) {
   
   if (nextIndex !== null) {
     gameState.waitingForChain = true
-    gameState.chainCards = [{ player, index }]
+    gameState.chainCards = [{ player, index, originalCard }]
     addLog(`点击${hand[nextIndex].attrEmoji}继续连线`)
   } else {
     endTurn(player)
@@ -592,6 +598,9 @@ function continueChain(player, index) {
   
   triggerCard(player, index)
   checkChain(player, index)
+  
+  // 重置选择状态
+  gameState.selectedCard = null
 }
 
 function endTurn(player) {
