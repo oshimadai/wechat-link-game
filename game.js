@@ -1,23 +1,23 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
- * 版本：v3.24 - 指定布局 + 自动消除
+ * 版本：v3.25 - 卡牌加大 + BUG-002/004 修复
  * 规则版本：完整规则书
  * 日期：2026-03-14
  * 
+ * v3.25 修复:
+ * - 卡牌尺寸：70→85，间距 8→10
+ * - BUG-002: P2 卡牌被消除后给 P1 计分（所有消除的牌都给激活玩家计分）
+ * - BUG-004: 3 个技能可以对全局任意 5 张牌使用（包括对手的）
+ * 
  * v3.24 修复:
  * - 布局：按照用户指定方案（P1 左/P2 右，纵向手牌）
- * - 标题：🔗 1V1 连线桌游 v3.24
- * 
- * v3.23b 修复:
- * - BUG-002: 激活后系统自动完成所有连线消除（当前回合玩家不能操作）
- * - BUG-003: 改为左右布局
  */
 
 const CONFIG = {
   WIN_SCORE: 40,
   HAND_SIZE: 5,
-  CARD_SIZE: 70,
-  CARD_GAP: 8,
+  CARD_SIZE: 85,
+  CARD_GAP: 10,
   ATTRS: ['fire', 'water', 'wood', 'wild'],
   ARROWS: ['↑', '→', '↓', '←'],
   ATTR_EMOJIS: {
@@ -439,7 +439,29 @@ wx.onTouchStart((res) => {
     }
   }
   
-  // 检查卡牌点击（左右布局）- 只能点击自己面前的牌
+  // 检查卡牌点击
+  // 如果正在等待技能目标，可以点击全场任意卡牌（包括对手）- 修复 BUG-004
+  if (gameState.waitingForAbility && gameState.abilitySourceCard) {
+    // 检查玩家 1 的牌
+    gameState.player1.hand.forEach((card, index) => {
+      const cardX = player1X - 35
+      const cardY = handStartY + index * (cardSize + cardGap)
+      if (x >= cardX && x <= cardX + cardSize && y >= cardY && y <= cardY + cardSize) {
+        if (card && !card.triggered) handleAbilityTarget(1, index)
+      }
+    })
+    // 检查玩家 2 的牌
+    gameState.player2.hand.forEach((card, index) => {
+      const cardX = player2X - 35
+      const cardY = handStartY + index * (cardSize + cardGap)
+      if (x >= cardX && x <= cardX + cardSize && y >= cardY && y <= cardY + cardSize) {
+        if (card && !card.triggered) handleAbilityTarget(2, index)
+      }
+    })
+    return
+  }
+  
+  // 正常回合：只能点击自己面前的牌
   const currentPlayer = gameState.currentPlayer
   const currentHand = currentPlayer === 1 ? gameState.player1.hand : gameState.player2.hand
   const currentX = currentPlayer === 1 ? player1X - 35 : player2X - 35
@@ -582,6 +604,7 @@ function endTurn(player) {
 }
 
 function handleAbilityTarget(player, index) {
+  // 获取目标卡牌的手牌（支持全场任意卡牌）
   const hand = player === 1 ? gameState.player1.hand : gameState.player2.hand
   const targetCard = hand[index]
   if (!targetCard || targetCard.triggered) return
@@ -589,35 +612,33 @@ function handleAbilityTarget(player, index) {
   const ability = gameState.abilitySourceCard.card.ability
   
   if (ability.id === 1) {
-    // 旋转：改变目标卡牌箭头方向
+    // 旋转：改变目标卡牌箭头方向（全场任意）- 修复 BUG-004
     const arrowMap = { '↑': '→', '→': '↓', '↓': '←', '←': '↑' }
     targetCard.arrow = arrowMap[targetCard.arrow]
     addLog(`${ability.icon} 旋转 ${targetCard.attrEmoji}`)
     gameState.waitingForAbility = false
-    // 技能使用完毕，开始自动消除
     startAutoChain(gameState.abilitySourceCard.player, gameState.abilitySourceCard.index, gameState.abilitySourceCard.card)
   } else if (ability.id === 2) {
-    // 变色：改变目标卡牌属性
+    // 变色：改变目标卡牌属性（全场任意）- 修复 BUG-004
     targetCard.attr = gameState.abilitySourceCard.card.attr
     targetCard.attrEmoji = gameState.abilitySourceCard.card.attrEmoji
     addLog(`${ability.icon} ${targetCard.attrEmoji} 变色`)
     gameState.waitingForAbility = false
-    // 技能使用完毕，开始自动消除
     startAutoChain(gameState.abilitySourceCard.player, gameState.abilitySourceCard.index, gameState.abilitySourceCard.card)
   } else if (ability.id === 3) {
-    // 换位：需要选择两张目标卡牌
+    // 换位：需要选择两张目标卡牌（全场任意）- 修复 BUG-004
     if (!gameState.abilityTarget1) {
       gameState.abilityTarget1 = { player, index, card: targetCard }
       addLog('请选择第二张牌')
     } else {
       const target2 = gameState.abilityTarget1
-      const temp = { ...hand[target2.index] }
-      hand[target2.index] = { ...targetCard }
+      const hand2 = target2.player === 1 ? gameState.player1.hand : gameState.player2.hand
+      const temp = { ...hand2[target2.index] }
+      hand2[target2.index] = { ...targetCard }
       hand[index] = { ...temp }
       addLog(`${ability.icon} 交换位置`)
       gameState.waitingForAbility = false
       gameState.abilityTarget1 = null
-      // 技能使用完毕，开始自动消除
       startAutoChain(gameState.abilitySourceCard.player, gameState.abilitySourceCard.index, gameState.abilitySourceCard.card)
     }
   }
@@ -689,12 +710,22 @@ function collectChainCards(player, index, card) {
   }
 }
 
-// 执行自动消除
+// 执行自动消除 - 修复 BUG-002: 所有消除的牌都给激活玩家计分
 function executeAutoChain(player) {
-  // 按顺序触发所有收集的卡牌
+  // 按顺序触发所有收集的卡牌，但分数都给激活玩家
   gameState.autoChainCards.forEach(item => {
     const { player: p, index: i, card: c } = item
-    triggerCard(p, i)
+    
+    // 从手牌移除
+    const hand = p === 1 ? gameState.player1.hand : gameState.player2.hand
+    hand[i] = null
+    gameState.triggeredCards.push({ ...card })
+    
+    // 分数都给激活玩家（不是卡牌所属玩家）
+    if (player === 1) gameState.player1.score += c.score
+    else gameState.player2.score += c.score
+    
+    addLog(`触发 ${c.attrEmoji} +${c.score}分 → ${player === 1 ? 'P1' : 'P2'}`)
   })
   
   addLog(`✅ 消除完成，共 ${gameState.autoChainCards.length} 张卡牌`)
