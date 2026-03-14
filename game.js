@@ -1,13 +1,17 @@
 /**
  * 1V1 连线桌游 - 微信小游戏
- * 版本：v3.23 - 自动消除 + 左右布局
+ * 版本：v3.23b - 自动消除 + 左右布局 + 回合限制
  * 规则版本：完整规则书
  * 日期：2026-03-14
  * 
- * v3.23 修复:
- * - BUG-002: 激活后系统自动完成所有连线消除（玩家不能操作）
+ * v3.23b 修复:
+ * - BUG-002: 激活后系统自动完成所有连线消除（当前回合玩家不能操作，对手可以观看）
  * - BUG-003: 改为左右布局（玩家 1 在左，玩家 2 在右，面对面）
- * - 新增：startAutoChain -> collectChainCards -> executeAutoChain 自动消除系统
+ * - 新增：autoChainPlayer 记录当前不能操作的玩家
+ * 
+ * v3.23 修复:
+ * - BUG-002: 激活后系统自动完成所有连线消除
+ * - BUG-003: 改为左右布局
  */
 
 const CONFIG = {
@@ -436,6 +440,12 @@ wx.onTouchStart((res) => {
   const player1X = centerX - totalWidth - 30
   const player2X = centerX + 30
   
+  // 检查是否当前回合玩家正在自动消除中（该玩家不能操作）
+  if (gameState.autoChainMode && gameState.autoChainPlayer === gameState.currentPlayer) {
+    addLog(`⚡ ${gameState.currentPlayer === 1 ? '玩家 1' : '玩家 2'} 请等待消除完成...`)
+    return
+  }
+  
   // 检查按钮点击（取消/激活）
   if (gameState.selectedCard && !gameState.waitingForAbility && !gameState.autoChainMode) {
     // 取消按钮
@@ -452,18 +462,15 @@ wx.onTouchStart((res) => {
     }
   }
   
-  // 检查卡牌点击（左右布局）
-  gameState.player1.hand.forEach((card, index) => {
-    const cardX = player1X + index * (cardSize + cardGap)
-    if (x >= cardX && x <= cardX + cardSize && y >= centerY && y <= centerY + cardSize) {
-      if (card) selectCard(1, index)
-    }
-  })
+  // 检查卡牌点击（左右布局）- 只能点击自己面前的牌
+  const currentPlayer = gameState.currentPlayer
+  const currentHand = currentPlayer === 1 ? gameState.player1.hand : gameState.player2.hand
+  const currentX = currentPlayer === 1 ? player1X : player2X
   
-  gameState.player2.hand.forEach((card, index) => {
-    const cardX = player2X + index * (cardSize + cardGap)
+  currentHand.forEach((card, index) => {
+    const cardX = currentX + index * (cardSize + cardGap)
     if (x >= cardX && x <= cardX + cardSize && y >= centerY && y <= centerY + cardSize) {
-      if (card) selectCard(2, index)
+      if (card) selectCard(currentPlayer, index)
     }
   })
 })
@@ -642,10 +649,11 @@ function handleAbilityTarget(player, index) {
 
 // 开始自动消除流程 - 修复 BUG-002 核心
 function startAutoChain(player, index, card) {
-  addLog(`⚡ 开始自动消除...`)
+  addLog(`⚡ 自动消除中，${player === 1 ? '玩家 1' : '玩家 2'} 请等待...`)
   
-  // 标记当前卡牌为"正在消除"
+  // 标记当前回合玩家，该玩家不能操作
   gameState.autoChainMode = true
+  gameState.autoChainPlayer = player  // 记录当前不能操作的玩家
   gameState.autoChainCards = []
   
   // 收集所有要消除的卡牌
@@ -715,6 +723,7 @@ function executeAutoChain(player) {
   
   // 清除自动消除状态
   gameState.autoChainMode = false
+  gameState.autoChainPlayer = null
   gameState.autoChainCards = []
   gameState.selectedCard = null
   gameState.abilitySourceCard = null
