@@ -719,7 +719,7 @@ function executeAutoChain(player) {
     // 从手牌移除
     const hand = p === 1 ? gameState.player1.hand : gameState.player2.hand
     hand[i] = null
-    gameState.triggeredCards.push({ ...card })
+    gameState.triggeredCards.push({ ...c })
     
     // 分数都给激活玩家（不是卡牌所属玩家）
     if (player === 1) gameState.player1.score += c.score
