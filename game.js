@@ -188,7 +188,10 @@ function initGame() {
   console.log('🔗 1V1 连线桌游 v1.0 - 初始化')
   
   gameState.player1 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
+  // 后手玩家 (P2) 随机获得 1 个 Token 作为补偿
+  const randomTokenAttr = CONFIG.ATTRS[Math.floor(Math.random() * 3)] // 只从火/水/木中随机
   gameState.player2 = { hand: [], deck: generateDeck(), score: 0, penalty: 0, tokens: { fire: 0, water: 0, wood: 0 } }
+  gameState.player2.tokens[randomTokenAttr] = 1
   
   for (let i = 0; i < CONFIG.HAND_SIZE; i++) {
     if (gameState.player1.deck.length > 0) gameState.player1.hand.push(gameState.player1.deck.pop())
@@ -205,7 +208,8 @@ function initGame() {
   gameState.chainCards = []
   gameState.triggeredCards = []
   gameState.gameOver = false
-  gameState.gameLog = ['🎮 游戏开始！点击卡牌触发']
+  const tokenEmoji = CONFIG.ATTR_EMOJIS[randomTokenAttr]
+  gameState.gameLog = [`🎮 游戏开始！P2 获得 ${tokenEmoji} Token`, '🎮 游戏开始！点击卡牌触发']
   
   render()
 }
@@ -260,6 +264,14 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player1.score}分`, player1X, infoY + 10)
   ctx.fillText(`扣:${gameState.player1.penalty}`, player1X, infoY + 28)
+  
+  // 显示 Token
+  const tokens1 = gameState.player1.tokens
+  let tokenText1 = ''
+  if (tokens1.fire > 0) tokenText1 += '🔥'
+  if (tokens1.water > 0) tokenText1 += '💧'
+  if (tokens1.wood > 0) tokenText1 += '🌿'
+  ctx.fillText(tokenText1 || '-', player1X, infoY + 44)
   
   // 玩家 1 手牌（纵向一列）
   gameState.player1.hand.forEach((card, index) => {
@@ -320,6 +332,14 @@ function render() {
   ctx.font = '14px Arial'
   ctx.fillText(`${gameState.player2.score}分`, player2X, infoY + 10)
   ctx.fillText(`扣:${gameState.player2.penalty}`, player2X, infoY + 28)
+  
+  // 显示 Token
+  const tokens2 = gameState.player2.tokens
+  let tokenText2 = ''
+  if (tokens2.fire > 0) tokenText2 += '🔥'
+  if (tokens2.water > 0) tokenText2 += '💧'
+  if (tokens2.wood > 0) tokenText2 += '🌿'
+  ctx.fillText(tokenText2 || '-', player2X, infoY + 44)
   
   // 玩家 2 手牌（纵向一列）
   gameState.player2.hand.forEach((card, index) => {
